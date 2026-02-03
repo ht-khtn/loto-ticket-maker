@@ -14,4 +14,17 @@ applyTo: "**"
 
 3. Cập nhật tiến trình:
 
-- Mở PROCESS_CHECK.md và tick các mục đã hoàn thành
+- Mở PROCESS_CHECK.md và tick các mục đã hoàn thành.
+
+4. Chỉnh sửa file:
+
+- Không xóa file mà chỉ modify nó.
+
+5. Todo-list:
+
+- Luôn tạo todo-list trước khi thực hiện.
+- Đảm bảo todo-list rõ ràng, cụ thể và có thể thực hiện được.
+
+6. Single-reponse:
+
+- Cố gắng thực hiện tất cả yêu cầu trong 1 reponse duy nhất

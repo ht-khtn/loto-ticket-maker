@@ -1,11 +1,8 @@
 """Sinh vị trí các ô theo quy luật.
 
-Trong milestone đầu:
-- chỉ cần tạo danh sách các hình chữ nhật (rect) theo rows/cols + padding
-
-Sau đó mở rộng:
-- rule loto VN (3x9) / bingo (5x5)
-- sinh số theo seed để tái tạo
+- Tạo danh sách rect theo rows/cols + padding.
+- Hỗ trợ header phía trên grid.
+- Hỗ trợ gap giữa các nhóm hàng (ví dụ 15 hàng chia nhóm 3 hàng).
 """
 
 from __future__ import annotations
@@ -27,22 +24,35 @@ def generate_grid_rects_mm(template: TicketTemplateSpec, grid: GridSpec) -> list
     """Tạo danh sách rect theo mm trong vùng vé.
 
     Quy ước: (0,0) là góc trên-trái của vé.
+
+    Grid rects chỉ bao gồm vùng ô số (không bao gồm header).
     """
     content_x = grid.padding_mm
-    content_y = grid.padding_mm
+    content_y = grid.padding_mm + max(0.0, grid.header_height_mm)
     content_w = template.width_mm - 2 * grid.padding_mm
-    content_h = template.height_mm - 2 * grid.padding_mm
+    content_h = template.height_mm - 2 * grid.padding_mm - max(0.0, grid.header_height_mm)
 
+    if grid.rows <= 0 or grid.cols <= 0:
+        return []
+
+    group_size = max(1, int(grid.row_group_size))
+    group_gap = max(0.0, float(grid.row_group_gap_mm))
+    group_count = (grid.rows + group_size - 1) // group_size
+    total_gap = group_gap * max(0, group_count - 1)
+
+    # Trừ khoảng gap để vẫn giữ tổng chiều cao nằm trong content_h
     cell_w = content_w / grid.cols
-    cell_h = content_h / grid.rows
+    cell_h = (content_h - total_gap) / grid.rows
 
     rects: list[RectMM] = []
     for r in range(grid.rows):
+        gap_before = (r // group_size) * group_gap
+        y = content_y + r * cell_h + gap_before
         for c in range(grid.cols):
             rects.append(
                 RectMM(
                     x=content_x + c * cell_w,
-                    y=content_y + r * cell_h,
+                    y=y,
                     w=cell_w,
                     h=cell_h,
                 )
