@@ -20,7 +20,7 @@ DEFAULT_GRID = GridSpec(
     header_height_mm=18.0,
     row_group_size=3,
     row_group_gap_mm=2.0,
-    number_font_scale=0.55,
+    number_font_scale=0.65,
 )
 
 DEFAULT_PRINT = PrintSpec(

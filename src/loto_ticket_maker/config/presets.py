@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from typing import Any, TypedDict, cast
 
-from ..core.models import GridSpec, PrintSpec, TicketTemplateSpec
+from ..core.models import GridSpec, PrintSpec, TicketHeaderSpec, TicketTemplateSpec
 
 
 class TicketTemplateSpecDict(TypedDict):
@@ -22,30 +22,50 @@ class TicketTemplateSpecDict(TypedDict):
     background_path: str | None
 
 
+class TicketHeaderSpecDict(TypedDict):
+    org_text: str
+    org_image_path: str | None
+    round_name: str
+
+
 class GridSpecDict(TypedDict):
     rows: int
     cols: int
     padding_mm: float
     line_width_mm: float
 
+    header_height_mm: float
+    row_group_size: int
+    row_group_gap_mm: float
+    number_font_scale: float
+
 
 class PrintSpecDict(TypedDict):
+    mode: str
     page_size: str
     margin_mm: float
     spacing_mm: float
+    tickets_per_page: int
 
 
 class PresetDict(TypedDict):
     version: int
     template: TicketTemplateSpecDict
+    header: TicketHeaderSpecDict
     grid: GridSpecDict
     print_spec: PrintSpecDict
 
 
-_PRESET_VERSION = 1
+_PRESET_VERSION = 2
 
 
-def save_preset(path: str, template: TicketTemplateSpec, grid: GridSpec, print_spec: PrintSpec) -> None:
+def save_preset(
+    path: str,
+    template: TicketTemplateSpec,
+    header: TicketHeaderSpec,
+    grid: GridSpec,
+    print_spec: PrintSpec,
+) -> None:
     data: PresetDict = {
         "version": _PRESET_VERSION,
         "template": {
@@ -53,16 +73,28 @@ def save_preset(path: str, template: TicketTemplateSpec, grid: GridSpec, print_s
             "height_mm": float(template.height_mm),
             "background_path": template.background_path,
         },
+        "header": {
+            "org_text": str(header.org_text),
+            "org_image_path": header.org_image_path,
+            "round_name": str(header.round_name),
+        },
         "grid": {
             "rows": int(grid.rows),
             "cols": int(grid.cols),
             "padding_mm": float(grid.padding_mm),
             "line_width_mm": float(grid.line_width_mm),
+
+            "header_height_mm": float(grid.header_height_mm),
+            "row_group_size": int(grid.row_group_size),
+            "row_group_gap_mm": float(grid.row_group_gap_mm),
+            "number_font_scale": float(grid.number_font_scale),
         },
         "print_spec": {
+            "mode": str(print_spec.mode),
             "page_size": str(print_spec.page_size),
             "margin_mm": float(print_spec.margin_mm),
             "spacing_mm": float(print_spec.spacing_mm),
+            "tickets_per_page": int(print_spec.tickets_per_page),
         },
     }
 
@@ -70,7 +102,7 @@ def save_preset(path: str, template: TicketTemplateSpec, grid: GridSpec, print_s
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def load_preset(path: str) -> tuple[TicketTemplateSpec, GridSpec, PrintSpec]:
+def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSpec, PrintSpec]:
     with open(path, "r", encoding="utf-8") as f:
         raw: Any = json.load(f)
 
@@ -80,16 +112,18 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, GridSpec, PrintSpec]:
     raw_obj = cast(dict[str, object], raw)
 
     version = raw_obj.get("version")
-    if not isinstance(version, int) or version != _PRESET_VERSION:
+    if not isinstance(version, int) or version not in (1, 2):
         raise ValueError(f"Preset version không hỗ trợ: {version}")
 
     t_any = raw_obj.get("template")
+    h_any = raw_obj.get("header") if version == 2 else None
     g_any = raw_obj.get("grid")
     p_any = raw_obj.get("print_spec")
     if not isinstance(t_any, dict) or not isinstance(g_any, dict) or not isinstance(p_any, dict):
         raise ValueError("Preset thiếu template/grid/print_spec.")
 
     t_obj = cast(dict[str, object], t_any)
+    h_obj = cast(dict[str, object], h_any) if isinstance(h_any, dict) else {}
     g_obj = cast(dict[str, object], g_any)
     p_obj = cast(dict[str, object], p_any)
 
@@ -102,6 +136,16 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, GridSpec, PrintSpec]:
     if isinstance(bg, str) and bg.strip():
         background_path = bg
 
+    org_text = h_obj.get("org_text")
+    org_image_path = h_obj.get("org_image_path")
+    round_name = h_obj.get("round_name")
+
+    header = TicketHeaderSpec(
+        org_text=str(org_text) if isinstance(org_text, str) else "",
+        org_image_path=str(org_image_path) if isinstance(org_image_path, str) and org_image_path.strip() else None,
+        round_name=str(round_name) if isinstance(round_name, str) else "",
+    )
+
     rows = g_obj.get("rows")
     cols = g_obj.get("cols")
     padding = g_obj.get("padding_mm")
@@ -111,16 +155,53 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, GridSpec, PrintSpec]:
     if not isinstance(padding, (int, float)) or not isinstance(line_w, (int, float)):
         raise ValueError("GridSpec không hợp lệ (padding_mm/line_width_mm).")
 
+    header_height_mm = g_obj.get("header_height_mm")
+    row_group_size = g_obj.get("row_group_size")
+    row_group_gap_mm = g_obj.get("row_group_gap_mm")
+    number_font_scale = g_obj.get("number_font_scale")
+
+    # v1 preset không có các field này -> dùng default
+    if not isinstance(header_height_mm, (int, float)):
+        header_height_mm = GridSpec().header_height_mm
+    if not isinstance(row_group_size, int):
+        row_group_size = GridSpec().row_group_size
+    if not isinstance(row_group_gap_mm, (int, float)):
+        row_group_gap_mm = GridSpec().row_group_gap_mm
+    if not isinstance(number_font_scale, (int, float)):
+        number_font_scale = GridSpec().number_font_scale
+
+    mode = p_obj.get("mode")
     page_size = p_obj.get("page_size")
     margin = p_obj.get("margin_mm")
     spacing = p_obj.get("spacing_mm")
+    tickets_per_page = p_obj.get("tickets_per_page")
     if not isinstance(page_size, str):
         raise ValueError("PrintSpec không hợp lệ (page_size).")
     if not isinstance(margin, (int, float)) or not isinstance(spacing, (int, float)):
         raise ValueError("PrintSpec không hợp lệ (margin_mm/spacing_mm).")
 
-    template = TicketTemplateSpec(width_mm=float(width), height_mm=float(height), background_path=background_path)
-    grid = GridSpec(rows=rows, cols=cols, padding_mm=float(padding), line_width_mm=float(line_w))
-    print_spec = PrintSpec(page_size=page_size, margin_mm=float(margin), spacing_mm=float(spacing))
+    if not isinstance(mode, str):
+        mode = PrintSpec().mode
+    if not isinstance(tickets_per_page, int):
+        tickets_per_page = PrintSpec().tickets_per_page
 
-    return template, grid, print_spec
+    template = TicketTemplateSpec(width_mm=float(width), height_mm=float(height), background_path=background_path)
+    grid = GridSpec(
+        rows=rows,
+        cols=cols,
+        padding_mm=float(padding),
+        line_width_mm=float(line_w),
+        header_height_mm=float(header_height_mm),
+        row_group_size=int(row_group_size),
+        row_group_gap_mm=float(row_group_gap_mm),
+        number_font_scale=float(number_font_scale),
+    )
+    print_spec = PrintSpec(
+        mode=str(mode),
+        page_size=page_size,
+        margin_mm=float(margin),
+        spacing_mm=float(spacing),
+        tickets_per_page=int(tickets_per_page),
+    )
+
+    return template, header, grid, print_spec

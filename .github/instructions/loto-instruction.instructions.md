@@ -28,3 +28,7 @@ applyTo: "**"
 6. Single-reponse:
 
 - Cố gắng thực hiện tất cả yêu cầu trong 1 reponse duy nhất
+
+7. Kiểm tra lại:
+
+- Sau khi thực hiện, luôn kiểm tra và fix problems trong workspace cho tất cả các file, cho dù file đó có sửa hay không
