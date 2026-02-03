@@ -27,5 +27,9 @@
     "margin_mm": 5.0,
     "spacing_mm": 2.0,
     "tickets_per_page": 6
+  },
+  "ui": {
+    "seed": 0,
+    "ticket_count": 6
   }
 }

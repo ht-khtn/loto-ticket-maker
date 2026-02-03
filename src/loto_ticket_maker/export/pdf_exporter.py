@@ -125,13 +125,13 @@ def _draw_header(
 
     regular_font, bold_font = _ensure_fonts()
 
-    # LEFT COLUMN: Round Name (top) + Seed (below)
-    top_y = y_top - gap
+    # LEFT COLUMN: Round Name (top) + Seed (below), centered
     available_h = inner_h - 2 * gap
-
     round_text = header.round_name
+    round_size = 0
+    round_w = 0.0
     if round_text:
-        size = _fit_font_size(
+        round_size = _fit_font_size(
             c,
             round_text,
             font_name=bold_font,
@@ -140,15 +140,16 @@ def _draw_header(
             min_size=10,
             max_size=int(available_h * 0.4),
         )
-        c.setFont(bold_font, size)
-        c.drawString(left_x, top_y - size, round_text)
-        top_y = top_y - size - gap * 0.4
+        round_w = c.stringWidth(round_text, bold_font, round_size)
 
+    seed_text = None
+    seed_size = 0
+    seed_w = 0.0
     if seed is not None:
         seed_text = str(seed)
         if header.seed_pad_length > 0:
             seed_text = seed_text.zfill(header.seed_pad_length)
-        size = _fit_font_size(
+        seed_size = _fit_font_size(
             c,
             seed_text,
             font_name=bold_font,
@@ -157,9 +158,45 @@ def _draw_header(
             min_size=12,
             max_size=int(available_h * 0.6),
         )
-        c.setFont(bold_font, size)
-        c.setFillColorRGB(0.01, 0.52, 0.78)
-        c.drawString(left_x, top_y - size, seed_text)
+        seed_w = c.stringWidth(seed_text, bold_font, seed_size)
+
+    total_h = 0.0
+    if round_text:
+        total_h += round_size
+    if seed_text:
+        total_h += seed_size
+    if round_text and seed_text:
+        total_h += gap * 0.5
+    top_y = y1 + (inner_h - total_h) / 2 + total_h
+
+    if round_text:
+        c.setFont(bold_font, round_size)
+        rx = left_x + (left_w - round_w) / 2
+        c.drawString(rx, top_y - round_size, round_text)
+        top_y = top_y - round_size - gap * 0.5
+
+    if seed_text:
+        c.setFont(bold_font, seed_size)
+        sx = left_x + (left_w - seed_w) / 2
+        sy = top_y - seed_size
+
+        # dashed rounded border around seed
+        pad = max(3.0, gap * 0.4)
+        bx1 = sx - pad
+        by1 = sy - pad * 0.3
+        bw = seed_w + pad * 2
+        bh = seed_size + pad * 0.6
+        try:
+            c.saveState()
+            c.setDash(3, 3)
+            c.setStrokeColorRGB(0.23, 0.51, 0.96)
+            c.roundRect(bx1, by1, bw, bh, radius)
+            c.restoreState()
+        except Exception:
+            pass
+
+        c.setFillColorRGB(0.23, 0.51, 0.96)
+        c.drawString(sx, sy, seed_text)
         c.setFillColorRGB(0, 0, 0)
 
     # RIGHT COLUMN: Org image or org text
@@ -181,21 +218,24 @@ def _draw_header(
         lines = header.org_text.splitlines()
         lines = lines[:6]
         if lines:
-            per_line_h = min(inner_h / max(1, len(lines)), inner_h * 0.3)
+            per_line_h = inner_h / max(1, len(lines))
             total_h = per_line_h * len(lines)
             y = y1 + (inner_h - total_h) / 2
             for line in lines:
+                raw_line = line if line != "" else " "
                 size = _fit_font_size(
                     c,
-                    line,
+                    raw_line,
                     font_name=regular_font,
                     max_w=right_w - 2 * gap,
-                    max_h=per_line_h * 0.9,
+                    max_h=per_line_h * 0.95,
                     min_size=8,
-                    max_size=int(per_line_h * 1.1),
+                    max_size=int(per_line_h * 0.95),
                 )
                 c.setFont(regular_font, size)
-                c.drawString(right_x + gap, y + (per_line_h - size) * 0.2, line)
+                tw = c.stringWidth(raw_line, regular_font, size)
+                tx = right_x + (right_w - tw) / 2
+                c.drawString(tx, y + (per_line_h - size) * 0.2, raw_line)
                 y += per_line_h
 
 

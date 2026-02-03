@@ -94,13 +94,14 @@ def _draw_header(
     right_col_w = inner_w - left_col_w - gap
     right_x = x1 + left_col_w + gap
 
-    # LEFT COLUMN: Round Name (top) + Seed (below)
-    top_y = y1 + gap
+    # LEFT COLUMN: Round Name (top) + Seed (below), centered
     available_h = inner_h - 2 * gap
 
     round_text = header.round_name
+    round_font = None
+    round_size = (0, 0)
     if round_text:
-        font = _fit_font_for_text(
+        round_font = _fit_font_for_text(
             draw,
             round_text,
             max_w=left_col_w - 2 * gap,
@@ -109,15 +110,17 @@ def _draw_header(
             min_size=10,
             max_size=int(available_h * 0.4),
         )
-        draw.text((left_x, top_y), round_text, font=font, fill=(15, 23, 42))
-        bbox = draw.textbbox((left_x, top_y), round_text, font=font)
-        top_y = bbox[3] + gap * 0.3
+        bbox = draw.textbbox((0, 0), round_text, font=round_font)
+        round_size = (bbox[2] - bbox[0], bbox[3] - bbox[1])
 
+    seed_text = None
+    seed_font = None
+    seed_size = (0, 0)
     if seed is not None:
         seed_text = str(seed)
         if header.seed_pad_length > 0:
             seed_text = seed_text.zfill(header.seed_pad_length)
-        font = _fit_font_for_text(
+        seed_font = _fit_font_for_text(
             draw,
             seed_text,
             max_w=left_col_w - 2 * gap,
@@ -126,7 +129,54 @@ def _draw_header(
             min_size=12,
             max_size=int(available_h * 0.6),
         )
-        draw.text((left_x, top_y), seed_text, font=font, fill=(2, 132, 199))
+        bbox = draw.textbbox((0, 0), seed_text, font=seed_font)
+        seed_size = (bbox[2] - bbox[0], bbox[3] - bbox[1])
+
+    total_h = 0.0
+    if round_text:
+        total_h += round_size[1]
+    if seed_text:
+        total_h += seed_size[1]
+    if round_text and seed_text:
+        total_h += gap * 0.5
+    start_y = y1 + (inner_h - total_h) / 2
+
+    if round_text and round_font is not None:
+        rx = left_x + (left_col_w - round_size[0]) / 2
+        draw.text((rx, start_y), round_text, font=round_font, fill=(15, 23, 42))
+        start_y += round_size[1] + gap * 0.5
+
+    if seed_text and seed_font is not None:
+        sx = left_x + (left_col_w - seed_size[0]) / 2
+        sy = start_y
+        # Dashed rounded border around seed
+        pad = max(4.0, gap * 0.4)
+        bx1 = sx - pad
+        by1 = sy - pad * 0.4
+        bx2 = sx + seed_size[0] + pad
+        by2 = sy + seed_size[1] + pad * 0.4
+        dash = max(4, int(pad * 0.8))
+        gap_len = max(3, int(pad * 0.6))
+        # draw dashed edges
+        x = bx1 + radius
+        while x < bx2 - radius:
+            draw.line([(x, by1), (min(x + dash, bx2 - radius), by1)], fill=(59, 130, 246), width=stroke_w)
+            draw.line([(x, by2), (min(x + dash, bx2 - radius), by2)], fill=(59, 130, 246), width=stroke_w)
+            x += dash + gap_len
+        y = by1 + radius
+        while y < by2 - radius:
+            draw.line([(bx1, y), (bx1, min(y + dash, by2 - radius))], fill=(59, 130, 246), width=stroke_w)
+            draw.line([(bx2, y), (bx2, min(y + dash, by2 - radius))], fill=(59, 130, 246), width=stroke_w)
+            y += dash + gap_len
+        # corner arcs (solid to suggest rounding)
+        try:
+            draw.arc([bx1, by1, bx1 + 2 * radius, by1 + 2 * radius], 180, 270, fill=(59, 130, 246), width=stroke_w)
+            draw.arc([bx2 - 2 * radius, by1, bx2, by1 + 2 * radius], 270, 360, fill=(59, 130, 246), width=stroke_w)
+            draw.arc([bx1, by2 - 2 * radius, bx1 + 2 * radius, by2], 90, 180, fill=(59, 130, 246), width=stroke_w)
+            draw.arc([bx2 - 2 * radius, by2 - 2 * radius, bx2, by2], 0, 90, fill=(59, 130, 246), width=stroke_w)
+        except Exception:
+            pass
+        draw.text((sx, sy), seed_text, font=seed_font, fill=(59, 130, 246))
 
     # RIGHT COLUMN: Org image or org text (bên phải, tách riêng)
     right_y = y1 + gap
@@ -146,24 +196,28 @@ def _draw_header(
         except Exception:
             pass
     else:
-        # Org text (multiline, giữ nguyên khoảng trắng, canh giữa theo chiều dọc)
+        # Org text (multiline, giữ nguyên khoảng trắng, canh giữa ngang + dọc)
         lines = header.org_text.splitlines()
         lines = lines[:6]
         if lines:
-            per_line_h = min(right_h / max(1, len(lines)), right_h * 0.3)
+            per_line_h = right_h / max(1, len(lines))
             total_h = per_line_h * len(lines)
             y = right_y + (right_h - total_h) / 2
             for line in lines:
+                raw_line = line if line != "" else " "
                 font = _fit_font_for_text(
                     draw,
-                    line,
+                    raw_line,
                     max_w=right_col_w - 2 * gap,
-                    max_h=per_line_h * 0.9,
+                    max_h=per_line_h * 0.95,
                     prefer_bold=False,
                     min_size=8,
-                    max_size=int(per_line_h * 1.1),
+                    max_size=int(per_line_h * 0.95),
                 )
-                draw.text((right_x + gap, y), line, font=font, fill=(15, 23, 42))
+                bbox = draw.textbbox((0, 0), raw_line, font=font)
+                tw = bbox[2] - bbox[0]
+                tx = right_x + (right_col_w - tw) / 2
+                draw.text((tx, y), raw_line, font=font, fill=(15, 23, 42))
                 y += per_line_h
 
 

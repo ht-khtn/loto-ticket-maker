@@ -55,6 +55,12 @@ class PresetDict(TypedDict):
     header: TicketHeaderSpecDict
     grid: GridSpecDict
     print_spec: PrintSpecDict
+    ui: "UiStateDict"
+
+
+class UiStateDict(TypedDict):
+    seed: int
+    ticket_count: int
 
 
 _PRESET_VERSION = 2
@@ -66,6 +72,8 @@ def save_preset(
     header: TicketHeaderSpec,
     grid: GridSpec,
     print_spec: PrintSpec,
+    seed: int,
+    ticket_count: int,
 ) -> None:
     data: PresetDict = {
         "version": _PRESET_VERSION,
@@ -98,13 +106,17 @@ def save_preset(
             "spacing_mm": float(print_spec.spacing_mm),
             "tickets_per_page": int(print_spec.tickets_per_page),
         },
+        "ui": {
+            "seed": int(seed),
+            "ticket_count": int(ticket_count),
+        },
     }
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSpec, PrintSpec]:
+def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSpec, PrintSpec, UiStateDict]:
     with open(path, "r", encoding="utf-8") as f:
         raw: Any = json.load(f)
 
@@ -121,6 +133,7 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
     h_any = raw_obj.get("header") if version == 2 else None
     g_any = raw_obj.get("grid")
     p_any = raw_obj.get("print_spec")
+    ui_any = raw_obj.get("ui")
     if not isinstance(t_any, dict) or not isinstance(g_any, dict) or not isinstance(p_any, dict):
         raise ValueError("Preset thiếu template/grid/print_spec.")
 
@@ -128,6 +141,7 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
     h_obj = cast(dict[str, object], h_any) if isinstance(h_any, dict) else {}
     g_obj = cast(dict[str, object], g_any)
     p_obj = cast(dict[str, object], p_any)
+    ui_obj = cast(dict[str, object], ui_any) if isinstance(ui_any, dict) else {}
 
     width = t_obj.get("width_mm")
     height = t_obj.get("height_mm")
@@ -208,4 +222,11 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
         tickets_per_page=int(tickets_per_page),
     )
 
-    return template, header, grid, print_spec
+    ui_seed = ui_obj.get("seed")
+    ui_ticket_count = ui_obj.get("ticket_count")
+    ui_state: UiStateDict = {
+        "seed": int(ui_seed) if isinstance(ui_seed, int) else 0,
+        "ticket_count": int(ui_ticket_count) if isinstance(ui_ticket_count, int) else 6,
+    }
+
+    return template, header, grid, print_spec, ui_state
