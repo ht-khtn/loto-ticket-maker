@@ -232,30 +232,46 @@ class MainWindow(QMainWindow):
         self.round_name.setPlaceholderText("Ví dụ: VÒNG 12")
         lay.addWidget(self.round_name, 0, 1)
 
-        lay.addWidget(QLabel("Đơn vị / tổ chức"), 1, 0)
+        lay.addWidget(QLabel("Cao header (mm)"), 1, 0)
+        self.header_height_mm = QDoubleSpinBox()
+        self.header_height_mm.setRange(0.0, 60.0)
+        self.header_height_mm.setDecimals(1)
+        self.header_height_mm.setSingleStep(1.0)
+        self.header_height_mm.setValue(DEFAULT_GRID.header_height_mm)
+        lay.addWidget(self.header_height_mm, 1, 1)
+
+        lay.addWidget(QLabel("Khoảng cách header (mm)"), 2, 0)
+        self.header_spacing_mm = QDoubleSpinBox()
+        self.header_spacing_mm.setRange(0.0, 20.0)
+        self.header_spacing_mm.setDecimals(1)
+        self.header_spacing_mm.setSingleStep(0.5)
+        self.header_spacing_mm.setValue(DEFAULT_GRID.header_spacing_mm)
+        lay.addWidget(self.header_spacing_mm, 2, 1)
+
+        lay.addWidget(QLabel("Đơn vị / tổ chức"), 3, 0)
         self.org_text = QPlainTextEdit()
         self.org_text.setPlaceholderText("Ví dụ:\nCÔNG TY ABC\nCHI NHÁNH 1")
         self.org_text.setFixedHeight(90)
-        lay.addWidget(self.org_text, 2, 0, 1, 2)
+        lay.addWidget(self.org_text, 4, 0, 1, 2)
 
-        lay.addWidget(QLabel("Hoặc logo/ảnh"), 3, 0)
+        lay.addWidget(QLabel("Hoặc logo/ảnh"), 5, 0)
         self.org_image_label = QLabel("(không có)")
         self.org_image_label.setWordWrap(True)
         self.org_image_label.setStyleSheet("color: #93C5FD;")
-        lay.addWidget(self.org_image_label, 3, 1)
+        lay.addWidget(self.org_image_label, 5, 1)
 
         btn_org_img = QPushButton("Chọn ảnh…")
         btn_org_img_clear = QPushButton("Xoá")
         btn_org_img.clicked.connect(self._on_choose_org_image)
         btn_org_img_clear.clicked.connect(self._on_clear_org_image)
-        lay.addWidget(btn_org_img, 4, 0)
-        lay.addWidget(btn_org_img_clear, 4, 1)
+        lay.addWidget(btn_org_img, 6, 0)
+        lay.addWidget(btn_org_img_clear, 6, 1)
 
-        lay.addWidget(QLabel("Seed pad (số ký tự)"), 5, 0)
+        lay.addWidget(QLabel("Seed pad (số ký tự)"), 7, 0)
         self.seed_pad_length = QSpinBox()
         self.seed_pad_length.setRange(0, 12)
         self.seed_pad_length.setValue(DEFAULT_HEADER.seed_pad_length)
-        lay.addWidget(self.seed_pad_length, 5, 1)
+        lay.addWidget(self.seed_pad_length, 7, 1)
 
         return box
 
@@ -287,42 +303,20 @@ class MainWindow(QMainWindow):
         self.seed.setToolTip("0 = random; số khác 0 để tái tạo vé")
         lay.addWidget(self.seed, 2, 1)
 
-        lay.addWidget(QLabel("Số vé xuất"), 3, 0)
-        self.ticket_count = QSpinBox()
-        self.ticket_count.setRange(1, 200)
-        self.ticket_count.setValue(6)
-        lay.addWidget(self.ticket_count, 3, 1)
-
-        lay.addWidget(QLabel("Cao header (mm)"), 4, 0)
-        self.header_height_mm = QDoubleSpinBox()
-        self.header_height_mm.setRange(0.0, 60.0)
-        self.header_height_mm.setDecimals(1)
-        self.header_height_mm.setSingleStep(1.0)
-        self.header_height_mm.setValue(DEFAULT_GRID.header_height_mm)
-        lay.addWidget(self.header_height_mm, 4, 1)
-
-        lay.addWidget(QLabel("Khoảng cách header (mm)"), 5, 0)
-        self.header_spacing_mm = QDoubleSpinBox()
-        self.header_spacing_mm.setRange(0.0, 20.0)
-        self.header_spacing_mm.setDecimals(1)
-        self.header_spacing_mm.setSingleStep(0.5)
-        self.header_spacing_mm.setValue(DEFAULT_GRID.header_spacing_mm)
-        lay.addWidget(self.header_spacing_mm, 5, 1)
-
-        lay.addWidget(QLabel("Gap nhóm 3 hàng (mm)"), 6, 0)
+        lay.addWidget(QLabel("Gap nhóm 3 hàng (mm)"), 3, 0)
         self.row_group_gap_mm = QDoubleSpinBox()
         self.row_group_gap_mm.setRange(0.0, 20.0)
         self.row_group_gap_mm.setDecimals(1)
         self.row_group_gap_mm.setSingleStep(0.5)
         self.row_group_gap_mm.setValue(DEFAULT_GRID.row_group_gap_mm)
-        lay.addWidget(self.row_group_gap_mm, 6, 1)
+        lay.addWidget(self.row_group_gap_mm, 3, 1)
 
         hint = QLabel(
             "Luật đang dùng: 15x6 (đủ 1..60, mỗi hàng 2 ô trống, trống theo cột 6-5-5-5-5-4)"
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #6B7280;")
-        lay.addWidget(hint, 7, 0, 1, 2)
+        lay.addWidget(hint, 4, 0, 1, 2)
         return box
 
     def _build_print_group(self, parent: QWidget) -> QGroupBox:
@@ -354,32 +348,38 @@ class MainWindow(QMainWindow):
         self.page_size.setCurrentText(DEFAULT_PRINT.page_size.upper())
         lay.addWidget(self.page_size, 1, 1)
 
-        lay.addWidget(QLabel("Vé / trang"), 2, 0)
+        lay.addWidget(QLabel("Số vé xuất"), 2, 0)
+        self.ticket_count = QSpinBox()
+        self.ticket_count.setRange(1, 200)
+        self.ticket_count.setValue(6)
+        lay.addWidget(self.ticket_count, 2, 1)
+
+        lay.addWidget(QLabel("Vé / trang"), 3, 0)
         self.tickets_per_page = QSpinBox()
         self.tickets_per_page.setRange(1, 40)
         self.tickets_per_page.setValue(DEFAULT_PRINT.tickets_per_page)
-        lay.addWidget(self.tickets_per_page, 2, 1)
+        lay.addWidget(self.tickets_per_page, 3, 1)
 
-        lay.addWidget(QLabel("Lề (mm)"), 3, 0)
+        lay.addWidget(QLabel("Lề (mm)"), 4, 0)
         self.margin_mm = QDoubleSpinBox()
         self.margin_mm.setRange(0.0, 50.0)
         self.margin_mm.setDecimals(1)
         self.margin_mm.setSingleStep(1.0)
         self.margin_mm.setValue(DEFAULT_PRINT.margin_mm)
-        lay.addWidget(self.margin_mm, 3, 1)
+        lay.addWidget(self.margin_mm, 4, 1)
 
-        lay.addWidget(QLabel("Khoảng cách (mm)"), 4, 0)
+        lay.addWidget(QLabel("Khoảng cách (mm)"), 5, 0)
         self.spacing_mm = QDoubleSpinBox()
         self.spacing_mm.setRange(0.0, 50.0)
         self.spacing_mm.setDecimals(1)
         self.spacing_mm.setSingleStep(1.0)
         self.spacing_mm.setValue(DEFAULT_PRINT.spacing_mm)
-        lay.addWidget(self.spacing_mm, 4, 1)
+        lay.addWidget(self.spacing_mm, 5, 1)
 
         note = QLabel("PAGE mode: auto-fit theo vé/trang. TICKET mode: mỗi vé 1 trang đúng kích thước vé.")
         note.setWordWrap(True)
         note.setStyleSheet("color: #6B7280;")
-        lay.addWidget(note, 5, 0, 1, 2)
+        lay.addWidget(note, 6, 0, 1, 2)
         self._refresh_print_ui()
         return box
 

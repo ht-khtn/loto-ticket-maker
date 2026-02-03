@@ -1,7 +1,7 @@
 {
   "version": 2,
   "template": {
-    "width_mm": 60.0,
+    "width_mm": 50.0,
     "height_mm": 150.0,
     "background_path": null
   },
