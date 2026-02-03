@@ -50,7 +50,7 @@ from .image_utils import pil_to_qpixmap
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Loto Ticket Maker")
+        self.setWindowTitle("Loto Ticket Maker — Vé 15x6")
         self.resize(1200, 720)
 
         # Initialize early before any UI building
@@ -136,7 +136,7 @@ class MainWindow(QMainWindow):
         preview_container.setProperty("panel", True)
         preview_layout = QVBoxLayout(preview_container)
 
-        title = QLabel("Preview")
+        title = QLabel("Xem trước")
         title.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         title.setStyleSheet("font-size: 18px; font-weight: 600;")
 
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         zoom_layout.setContentsMargins(0, 0, 0, 0)
         zoom_layout.addWidget(title)
         zoom_layout.addStretch(1)
-        zoom_label = QLabel("Zoom")
+        zoom_label = QLabel("Thu phóng")
         self.zoom_value = QLabel("100%")
         self.zoom_slider = QSlider(Qt.Orientation.Horizontal)
         self.zoom_slider.setRange(50, 200)
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow):
         zoom_layout.addWidget(self.zoom_slider)
         zoom_layout.addWidget(self.zoom_value)
 
-        self.preview_label = QLabel("Bấm 'Tạo vé (preview)' để xem vé 15x6")
+        self.preview_label = QLabel("Xem trước sẽ tự cập nhật theo tuỳ chọn")
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.preview_label.setMinimumHeight(500)
         self.preview_label.setStyleSheet("background: #111827; border-radius: 10px;")
@@ -177,12 +177,12 @@ class MainWindow(QMainWindow):
         self._schedule_preview()
 
     def _build_preset_group(self, parent: QWidget) -> QGroupBox:
-        box = QGroupBox("Preset", parent)
+        box = QGroupBox("Mẫu cấu hình", parent)
         lay = QGridLayout(box)
 
-        btn_load = QPushButton("Mở preset…")
-        btn_save = QPushButton("Lưu preset…")
-        btn_sample = QPushButton("Nạp preset mẫu")
+        btn_load = QPushButton("Mở mẫu…")
+        btn_save = QPushButton("Lưu mẫu…")
+        btn_sample = QPushButton("Nạp mẫu có sẵn")
         btn_load.clicked.connect(self._on_load_preset)
         btn_save.clicked.connect(self._on_save_preset)
         btn_sample.clicked.connect(self._on_load_sample_preset)
@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_template_group(self, parent: QWidget) -> QGroupBox:
-        box = QGroupBox("Nền vé (template)", parent)
+        box = QGroupBox("Nền vé", parent)
         lay = QGridLayout(box)
 
         lay.addWidget(QLabel("Rộng (mm)"), 0, 0)
@@ -212,13 +212,13 @@ class MainWindow(QMainWindow):
         self.template_h.setValue(DEFAULT_TEMPLATE.height_mm)
         lay.addWidget(self.template_h, 1, 1)
 
-        self.bg_label = QLabel("(không có ảnh nền)")
+        self.bg_label = QLabel("(chưa chọn)")
         self.bg_label.setWordWrap(True)
         self.bg_label.setStyleSheet("color: #93C5FD;")
         lay.addWidget(QLabel("Ảnh nền"), 2, 0)
         lay.addWidget(self.bg_label, 2, 1)
 
-        btn_bg = QPushButton("Chọn ảnh nền…")
+        btn_bg = QPushButton("Chọn ảnh…")
         btn_bg_clear = QPushButton("Xoá")
         btn_bg.clicked.connect(self._on_choose_background)
         btn_bg_clear.clicked.connect(self._on_clear_background)
@@ -229,7 +229,7 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_header_group(self, parent: QWidget) -> QGroupBox:
-        box = QGroupBox("Header (thông tin trên vé)", parent)
+        box = QGroupBox("Thông tin đầu vé", parent)
         lay = QGridLayout(box)
 
         lay.addWidget(QLabel("Tên vòng"), 0, 0)
@@ -237,14 +237,15 @@ class MainWindow(QMainWindow):
         self.round_name.setPlaceholderText("Ví dụ: VÒNG 12")
         lay.addWidget(self.round_name, 0, 1)
 
-        lay.addWidget(QLabel("Đơn vị / tổ chức"), 1, 0)
+        org_label = QLabel("Đơn vị / tổ chức")
+        lay.addWidget(org_label, 1, 0, 1, 2)
         self.org_text = QPlainTextEdit()
         self.org_text.setPlaceholderText("Ví dụ:\nCÔNG TY ABC\nCHI NHÁNH 1")
         self.org_text.setFixedHeight(90)
         lay.addWidget(self.org_text, 2, 0, 1, 2)
 
         lay.addWidget(QLabel("Hoặc logo/ảnh"), 3, 0)
-        self.org_image_label = QLabel("(không có)")
+        self.org_image_label = QLabel("(chưa chọn)")
         self.org_image_label.setWordWrap(True)
         self.org_image_label.setStyleSheet("color: #93C5FD;")
         lay.addWidget(self.org_image_label, 3, 1)
@@ -259,7 +260,7 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_grid_group(self, parent: QWidget) -> QGroupBox:
-        box = QGroupBox("Ô số (grid)", parent)
+        box = QGroupBox("Bảng số (15×6)", parent)
         lay = QGridLayout(box)
 
         lay.addWidget(QLabel("Hàng × Cột"), 0, 0)
@@ -279,14 +280,14 @@ class MainWindow(QMainWindow):
         row_lay.addWidget(self.cols)
         lay.addWidget(row_wrap, 0, 1)
 
-        lay.addWidget(QLabel("Seed"), 2, 0)
+        lay.addWidget(QLabel("Seed (tái tạo)"), 2, 0)
         self.seed = QSpinBox()
         self.seed.setRange(0, 2_000_000_000)
         self.seed.setValue(0)
-        self.seed.setToolTip("0 = random; số khác 0 để tái tạo vé")
+        self.seed.setToolTip("0 = ngẫu nhiên; số khác 0 để tái tạo đúng vé")
         lay.addWidget(self.seed, 2, 1)
 
-        lay.addWidget(QLabel("Seed pad (số ký tự)"), 3, 0)
+        lay.addWidget(QLabel("Độ dài seed (ký tự)"), 3, 0)
         self.seed_pad_length = QSpinBox()
         self.seed_pad_length.setRange(0, 12)
         self.seed_pad_length.setValue(DEFAULT_HEADER.seed_pad_length)
@@ -301,16 +302,16 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_print_group(self, parent: QWidget) -> QGroupBox:
-        box = QGroupBox("In ấn (PDF)", parent)
+        box = QGroupBox("Xuất PDF", parent)
         lay = QGridLayout(box)
 
-        lay.addWidget(QLabel("Chế độ xuất"), 0, 0)
+        lay.addWidget(QLabel("Kiểu xuất"), 0, 0)
         mode_wrap = QWidget()
         mode_lay = QVBoxLayout(mode_wrap)
         mode_lay.setContentsMargins(0, 0, 0, 0)
 
-        self.mode_page = QRadioButton("Xuất theo trang A4/A5 (auto-fit)")
-        self.mode_ticket = QRadioButton("Xuất vé thường (mỗi vé 1 trang)")
+        self.mode_page = QRadioButton("Theo trang A4/A5 (tự canh vừa trang)")
+        self.mode_ticket = QRadioButton("Theo vé (mỗi vé 1 trang)")
         self._mode_group = QButtonGroup(self)
         self._mode_group.addButton(self.mode_page)
         self._mode_group.addButton(self.mode_ticket)
@@ -331,11 +332,12 @@ class MainWindow(QMainWindow):
 
         lay.addWidget(QLabel("Hướng giấy"), 2, 0)
         self.page_orientation = QComboBox()
-        self.page_orientation.addItems(["PORTRAIT", "LANDSCAPE"])
-        self.page_orientation.setCurrentText(DEFAULT_PRINT.orientation.upper())
+        self.page_orientation.addItem("Dọc", "PORTRAIT")
+        self.page_orientation.addItem("Ngang", "LANDSCAPE")
+        self._set_page_orientation(str(DEFAULT_PRINT.orientation))
         lay.addWidget(self.page_orientation, 2, 1)
 
-        lay.addWidget(QLabel("Cao header (mm)"), 3, 0)
+        lay.addWidget(QLabel("Cao khung đầu vé (mm)"), 3, 0)
         self.header_height_mm = QDoubleSpinBox()
         self.header_height_mm.setRange(0.0, 60.0)
         self.header_height_mm.setDecimals(1)
@@ -343,7 +345,7 @@ class MainWindow(QMainWindow):
         self.header_height_mm.setValue(DEFAULT_GRID.header_height_mm)
         lay.addWidget(self.header_height_mm, 3, 1)
 
-        lay.addWidget(QLabel("Khoảng cách header (mm)"), 4, 0)
+        lay.addWidget(QLabel("Cách khung đầu vé (mm)"), 4, 0)
         self.header_spacing_mm = QDoubleSpinBox()
         self.header_spacing_mm.setRange(0.0, 20.0)
         self.header_spacing_mm.setDecimals(1)
@@ -351,7 +353,7 @@ class MainWindow(QMainWindow):
         self.header_spacing_mm.setValue(DEFAULT_GRID.header_spacing_mm)
         lay.addWidget(self.header_spacing_mm, 4, 1)
 
-        lay.addWidget(QLabel("Khoảng cách nhóm 3 hàng (mm)"), 5, 0)
+        lay.addWidget(QLabel("Cách nhóm 3 hàng (mm)"), 5, 0)
         self.row_group_gap_mm = QDoubleSpinBox()
         self.row_group_gap_mm.setRange(0.0, 20.0)
         self.row_group_gap_mm.setDecimals(1)
@@ -365,13 +367,13 @@ class MainWindow(QMainWindow):
         self.ticket_count.setValue(6)
         lay.addWidget(self.ticket_count, 6, 1)
 
-        lay.addWidget(QLabel("Vé / trang"), 7, 0)
+        lay.addWidget(QLabel("Vé mỗi trang"), 7, 0)
         self.tickets_per_page = QSpinBox()
         self.tickets_per_page.setRange(1, 40)
         self.tickets_per_page.setValue(DEFAULT_PRINT.tickets_per_page)
         lay.addWidget(self.tickets_per_page, 7, 1)
 
-        lay.addWidget(QLabel("Lề (mm)"), 8, 0)
+        lay.addWidget(QLabel("Lề trang (mm)"), 8, 0)
         self.margin_mm = QDoubleSpinBox()
         self.margin_mm.setRange(0.0, 50.0)
         self.margin_mm.setDecimals(1)
@@ -379,7 +381,7 @@ class MainWindow(QMainWindow):
         self.margin_mm.setValue(DEFAULT_PRINT.margin_mm)
         lay.addWidget(self.margin_mm, 8, 1)
 
-        lay.addWidget(QLabel("Khoảng cách vé (mm)"), 9, 0)
+        lay.addWidget(QLabel("Cách giữa các vé (mm)"), 9, 0)
         self.spacing_mm = QDoubleSpinBox()
         self.spacing_mm.setRange(0.0, 50.0)
         self.spacing_mm.setDecimals(1)
@@ -387,12 +389,22 @@ class MainWindow(QMainWindow):
         self.spacing_mm.setValue(DEFAULT_PRINT.spacing_mm)
         lay.addWidget(self.spacing_mm, 9, 1)
 
-        note = QLabel("PAGE mode: auto-fit theo vé/trang. TICKET mode: mỗi vé 1 trang đúng kích thước vé.")
+        note = QLabel(
+            "Theo trang: tự canh theo vé/trang. Theo vé: mỗi vé 1 trang đúng kích thước vé."
+        )
         note.setWordWrap(True)
         note.setStyleSheet("color: #6B7280;")
         lay.addWidget(note, 10, 0, 1, 2)
         self._refresh_print_ui()
         return box
+
+    def _set_page_orientation(self, orientation: str) -> None:
+        value = str(orientation).upper()
+        for i in range(self.page_orientation.count()):
+            if str(self.page_orientation.itemData(i)).upper() == value:
+                self.page_orientation.setCurrentIndex(i)
+                return
+        self.page_orientation.setCurrentIndex(0)
 
     def _refresh_print_ui(self) -> None:
         is_page = self.mode_page.isChecked()
@@ -406,7 +418,7 @@ class MainWindow(QMainWindow):
         if self._background_path:
             self.bg_label.setText(self._background_path)
         else:
-            self.bg_label.setText("(không có ảnh nền)")
+            self.bg_label.setText("(chưa chọn)")
 
     def _current_template(self) -> TicketTemplateSpec:
         return TicketTemplateSpec(
@@ -437,10 +449,11 @@ class MainWindow(QMainWindow):
 
     def _current_print(self) -> PrintSpec:
         mode = "PAGE" if self.mode_page.isChecked() else "TICKET"
+        orientation = str(self.page_orientation.currentData() or "PORTRAIT")
         return PrintSpec(
             mode=mode,
             page_size=str(self.page_size.currentText()),
-            orientation=str(self.page_orientation.currentText()),
+            orientation=orientation,
             margin_mm=float(self.margin_mm.value()),
             spacing_mm=float(self.spacing_mm.value()),
             tickets_per_page=int(self.tickets_per_page.value()),
@@ -451,7 +464,7 @@ class MainWindow(QMainWindow):
             self,
             "Chọn ảnh nền",
             "",
-            "Images (*.png *.jpg *.jpeg *.webp *.bmp)",
+            "Hình ảnh (*.png *.jpg *.jpeg *.webp *.bmp)",
         )
         if not path:
             return
@@ -469,7 +482,7 @@ class MainWindow(QMainWindow):
             self,
             "Chọn logo/ảnh đơn vị",
             "",
-            "Images (*.png *.jpg *.jpeg *.webp *.bmp)",
+            "Hình ảnh (*.png *.jpg *.jpeg *.webp *.bmp)",
         )
         if not path:
             return
@@ -479,27 +492,27 @@ class MainWindow(QMainWindow):
 
     def _on_clear_org_image(self) -> None:
         self._org_image_path = None
-        self.org_image_label.setText("(không có)")
+        self.org_image_label.setText("(chưa chọn)")
         self._schedule_preview()
 
     def _on_load_sample_preset(self) -> None:
         sample_path = Path(__file__).resolve().parents[3] / "assets" / "presets" / "sample_preset.json"
         if not sample_path.exists():
-            QMessageBox.warning(self, "Không tìm thấy", f"Không thấy preset mẫu: {sample_path}")
+            QMessageBox.warning(self, "Không tìm thấy", f"Không thấy mẫu có sẵn: {sample_path}")
             return
         try:
             template, header, grid, print_spec, ui_state = load_preset(str(sample_path))
         except Exception as e:
-            QMessageBox.critical(self, "Lỗi preset", str(e))
+            QMessageBox.critical(self, "Lỗi mẫu cấu hình", str(e))
             return
         self._apply_loaded_preset(template, header, grid, print_spec, cast(dict[str, int], ui_state))
 
     def _on_load_preset(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Mở preset",
+            "Mở mẫu cấu hình",
             "",
-            "JSON Files (*.json)",
+            "Tệp JSON (*.json)",
         )
         if not path:
             return
@@ -507,7 +520,7 @@ class MainWindow(QMainWindow):
         try:
             template, header, grid, print_spec, ui_state = load_preset(path)
         except Exception as e:
-            QMessageBox.critical(self, "Lỗi preset", str(e))
+            QMessageBox.critical(self, "Lỗi mẫu cấu hình", str(e))
             return
 
         self._apply_loaded_preset(template, header, grid, print_spec, cast(dict[str, int], ui_state))
@@ -527,7 +540,7 @@ class MainWindow(QMainWindow):
 
         self.org_text.setPlainText(header.org_text)
         self._org_image_path = header.org_image_path
-        self.org_image_label.setText(header.org_image_path or "(không có)")
+        self.org_image_label.setText(header.org_image_path or "(chưa chọn)")
         self.round_name.setText(header.round_name)
         self.seed_pad_length.setValue(header.seed_pad_length)
 
@@ -545,7 +558,7 @@ class MainWindow(QMainWindow):
         self.mode_ticket.setChecked(mode == "TICKET")
         self.mode_page.setChecked(mode != "TICKET")
         self.page_size.setCurrentText(str(print_spec.page_size).upper())
-        self.page_orientation.setCurrentText(str(print_spec.orientation).upper())
+        self._set_page_orientation(str(print_spec.orientation))
         self.margin_mm.setValue(print_spec.margin_mm)
         self.spacing_mm.setValue(print_spec.spacing_mm)
         self.tickets_per_page.setValue(print_spec.tickets_per_page)
@@ -554,9 +567,9 @@ class MainWindow(QMainWindow):
     def _on_save_preset(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Lưu preset",
+            "Lưu mẫu cấu hình",
             "preset.json",
-            "JSON Files (*.json)",
+            "Tệp JSON (*.json)",
         )
         if not path:
             return
@@ -571,9 +584,9 @@ class MainWindow(QMainWindow):
                 ticket_count=int(self.ticket_count.value()),
             )
         except Exception as e:
-            QMessageBox.critical(self, "Lỗi preset", str(e))
+            QMessageBox.critical(self, "Lỗi mẫu cấu hình", str(e))
             return
-        QMessageBox.information(self, "OK", f"Đã lưu preset: {path}")
+        QMessageBox.information(self, "Thành công", f"Đã lưu mẫu cấu hình: {path}")
 
     def _connect_auto_preview(self) -> None:
         self.template_w.valueChanged.connect(self._schedule_preview)
@@ -705,7 +718,7 @@ class MainWindow(QMainWindow):
             self,
             "Xuất PDF",
             "loto_tickets_a4.pdf",
-            "PDF Files (*.pdf)",
+            "Tệp PDF (*.pdf)",
         )
         if not out_path:
             return
@@ -739,4 +752,4 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Lỗi xuất PDF", str(e))
             return
 
-        QMessageBox.information(self, "OK", f"Đã xuất PDF: {out_path}")
+        QMessageBox.information(self, "Thành công", f"Đã xuất PDF: {out_path}")
