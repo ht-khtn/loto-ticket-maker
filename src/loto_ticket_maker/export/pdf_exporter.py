@@ -161,8 +161,9 @@ def export_tickets_a4_pdf(
     need_h = per_col * ticket_h + max(0, per_col - 1) * spacing
 
     if need_w > avail_w + 1e-6 or need_h > avail_h + 1e-6:
+        page_name = print_spec.page_size.upper()
         raise LayoutError(
-            "Không đủ chỗ trên A4 với cấu hình hiện tại. "
+            f"Không đủ chỗ trên {page_name} với cấu hình hiện tại. "
             "Hãy giảm số vé/trang, giảm kích thước vé, hoặc giảm lề/khoảng cách."
         )
 
