@@ -40,11 +40,20 @@ from PySide6.QtWidgets import (
 
 from ..config.defaults import DEFAULT_GRID, DEFAULT_HEADER, DEFAULT_PRINT, DEFAULT_TEMPLATE
 from ..config.presets import load_preset, save_preset
+from ..core.layout import compute_page_layout
 from ..core.loto_15x6 import generate_loto_15x6
 from ..core.models import GridSpec, PrintSpec, TicketHeaderSpec, TicketTemplateSpec
 from ..export.pdf_exporter import export_tickets_pdf
 from ..render.ticket_renderer import render_page_preview, render_ticket_preview
 from .image_utils import pil_to_qpixmap
+
+
+def _page_mm_size(page_size: str, orientation: str) -> tuple[float, float]:
+    name = str(page_size).upper().strip()
+    w, h = (210.0, 297.0) if name != "A5" else (148.0, 210.0)
+    if str(orientation).upper().strip() == "LANDSCAPE":
+        return h, w
+    return w, h
 
 
 class MainWindow(QMainWindow):
@@ -160,6 +169,21 @@ class MainWindow(QMainWindow):
         self.preview_label.setMinimumHeight(500)
         self.preview_label.setStyleSheet("background: #111827; border-radius: 10px;")
 
+        page_nav = QWidget()
+        page_nav_layout = QHBoxLayout(page_nav)
+        page_nav_layout.setContentsMargins(0, 0, 0, 0)
+        page_nav_layout.setSpacing(8)
+        page_nav_layout.addStretch(1)
+        page_nav_layout.addWidget(QLabel("Trang"))
+        self.preview_page = QSpinBox()
+        self.preview_page.setRange(1, 1)
+        self.preview_page.setValue(1)
+        self.preview_page.setFixedWidth(70)
+        page_nav_layout.addWidget(self.preview_page)
+        self.preview_page_total = QLabel("/ 1 trang")
+        self.preview_page_total.setStyleSheet("color: #9CA3AF;")
+        page_nav_layout.addWidget(self.preview_page_total)
+
         scroll = QScrollArea(preview_container)
         scroll.setWidgetResizable(False)
         scroll.setWidget(self.preview_label)
@@ -169,12 +193,55 @@ class MainWindow(QMainWindow):
         self.preview_scroll = scroll
 
         preview_layout.addWidget(zoom_wrap)
+        preview_layout.addWidget(page_nav)
         preview_layout.addWidget(scroll)
 
         layout.addWidget(preview_container, 1)
 
         self._connect_auto_preview()
         self._schedule_preview()
+
+    def _refresh_preview_paging(self) -> tuple[int, int]:
+        """Trả về (page_index_0_based, total_pages).
+
+        - PAGE mode: total_pages = số trang sẽ xuất theo layout thật
+        - TICKET mode: luôn 1 trang
+        """
+        print_spec = self._current_print()
+        if str(print_spec.mode).upper().strip() != "PAGE":
+            self.preview_page.setEnabled(False)
+            self.preview_page.setRange(1, 1)
+            self.preview_page.setValue(1)
+            self.preview_page_total.setText("/ 1 trang")
+            return 0, 1
+
+        self.preview_page.setEnabled(True)
+
+        page_w_mm, page_h_mm = _page_mm_size(print_spec.page_size, print_spec.orientation)
+        template = self._current_template()
+        layout = compute_page_layout(
+            page_w_mm=page_w_mm,
+            page_h_mm=page_h_mm,
+            ticket_w_mm=template.width_mm,
+            ticket_h_mm=template.height_mm,
+            margin_mm=print_spec.margin_mm,
+            spacing_mm=print_spec.spacing_mm,
+            tickets_per_page=print_spec.tickets_per_page,
+        )
+        per_page = max(1, int(layout.rows) * int(layout.cols))
+        total = max(1, (int(self.ticket_count.value()) + per_page - 1) // per_page)
+
+        cur = int(self.preview_page.value())
+        cur = max(1, min(cur, total))
+        self.preview_page.blockSignals(True)
+        try:
+            self.preview_page.setRange(1, total)
+            self.preview_page.setValue(cur)
+        finally:
+            self.preview_page.blockSignals(False)
+
+        self.preview_page_total.setText(f"/ {total} trang")
+        return cur - 1, total
 
     def _build_preset_group(self, parent: QWidget) -> QGroupBox:
         box = QGroupBox("Mẫu cấu hình", parent)
@@ -606,6 +673,7 @@ class MainWindow(QMainWindow):
         self.round_name.textChanged.connect(self._schedule_preview)
         self.org_text.textChanged.connect(self._schedule_preview)
         self.seed_pad_length.valueChanged.connect(self._schedule_preview)
+        self.preview_page.valueChanged.connect(self._schedule_preview)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if (
@@ -664,13 +732,29 @@ class MainWindow(QMainWindow):
         zoom = self.zoom_slider.value() / 100.0
         render_zoom = max(1.0, zoom)
 
+        page_index, _total_pages = self._refresh_preview_paging()
+
         if str(print_spec.mode).upper() == "PAGE":
-            per_page = int(print_spec.tickets_per_page)
-            count = min(int(self.ticket_count.value()), max(1, per_page))
+            page_w_mm, page_h_mm = _page_mm_size(print_spec.page_size, print_spec.orientation)
+            layout = compute_page_layout(
+                page_w_mm=page_w_mm,
+                page_h_mm=page_h_mm,
+                ticket_w_mm=template.width_mm,
+                ticket_h_mm=template.height_mm,
+                margin_mm=print_spec.margin_mm,
+                spacing_mm=print_spec.spacing_mm,
+                tickets_per_page=print_spec.tickets_per_page,
+            )
+            per_page = max(1, int(layout.rows) * int(layout.cols))
+
+            total_tickets = int(self.ticket_count.value())
+            start = page_index * per_page
+            end = min(total_tickets, start + per_page)
+            count = max(0, end - start)
             tickets: list[list[list[int | None]]] = []
             seeds: list[int | None] = []
             for i in range(count):
-                s = base_seed + i
+                s = base_seed + (start + i)
                 seeds.append(s)
                 tickets.append(generate_loto_15x6(seed=s))
             img = render_page_preview(
