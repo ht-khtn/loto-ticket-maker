@@ -46,7 +46,8 @@ def render_ticket_preview(
     if template.background_path:
         try:
             bg = Image.open(template.background_path).convert("RGB")
-            bg = bg.resize((width_px, height_px), Image.Resampling.LANCZOS)
+            resample_filter = int(Image.Resampling.LANCZOS)  # type: ignore[reportUnknownMemberType]
+            bg = bg.resize((width_px, height_px), resample_filter)  # type: ignore[reportUnknownArgumentType]
             img.paste(bg, (0, 0))
         except Exception:
             pass

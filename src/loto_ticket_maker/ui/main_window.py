@@ -44,6 +44,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Loto Ticket Maker")
         self.resize(1200, 720)
 
+        # Initialize early before any UI building
+        self._background_path: str | None = DEFAULT_TEMPLATE.background_path
+        self._last_preview: QPixmap | None = None
+        self._last_seed: int | None = None
+
         root = QWidget(self)
         self.setCentralWidget(root)
 
@@ -107,11 +112,6 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(sidebar)
         layout.addWidget(preview_container, 1)
-
-        self._last_preview: QPixmap | None = None
-        self._last_seed: int | None = None
-
-        self._background_path: str | None = DEFAULT_TEMPLATE.background_path
 
     def _build_template_group(self, parent: QWidget) -> QGroupBox:
         box = QGroupBox("Nền vé (template)", parent)

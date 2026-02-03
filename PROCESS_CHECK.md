@@ -16,7 +16,7 @@ File này dùng để tick các hạng mục đã làm được theo [PLAN.md](P
 
 ### M3 — Số & rule
 
-- [x] Implement rule mới theo RULE.md (15x6, đủ 1..60, ràng buộc ô trống)
+- [x] Implement rule mới theo RULE.md (15x6, dải cột cố định 1-9/10-19/.../50-60)
 - [x] Seed để tái tạo vé
 
 ### M4 — Xuất PDF in nhiều vé/trang
@@ -34,10 +34,11 @@ File này dùng để tick các hạng mục đã làm được theo [PLAN.md](P
 
 - [x] Grid 15 hàng x 6 cột
 - [x] Chia 15 hàng thành 5 nhóm (mỗi nhóm 3 hàng) khi render/in
-- [x] Đủ số 1..60, mỗi số đúng 1 lần
+- [x] Dải cột cố định: cột 1→1-9, cột 2→10-19, ..., cột 6→50-60
+- [x] Mỗi số 1-60 xuất hiện đúng 1 lần (ở cột phù hợp)
 - [x] Ô trống theo cột: 6-5-5-5-5-4
 - [x] Mỗi hàng có đúng 2 ô trống
-- [x] Random hoá vị trí trống + shuffle số (hỗ trợ seed)
+- [x] Random hoá vị trí trống + shuffle số trong cột (hỗ trợ seed)
 
 ## Diagnostics
 
