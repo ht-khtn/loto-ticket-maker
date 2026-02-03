@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.log
+.dist/
+build/
+dist/
+*.spec
+.vscode/
+.idea/
+*.pdf
+*.png
+*.jpg

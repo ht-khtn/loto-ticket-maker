@@ -1,0 +1,7 @@
+Ghi chú: dự án dùng layout `src/`.
+
+Khi chạy dev, khuyến nghị:
+- `python -m loto_ticket_maker` (từ repo root) với PYTHONPATH tự nhận nếu cài editable
+
+Nếu gặp lỗi import, bước tiếp theo là thêm `pyproject.toml` và cài:
+- `pip install -e .`

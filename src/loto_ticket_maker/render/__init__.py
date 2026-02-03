@@ -1,0 +1,1 @@
+"""Rendering preview (ảnh)."""
