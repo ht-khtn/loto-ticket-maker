@@ -23,10 +23,18 @@ File này dùng để tick các hạng mục đã làm được theo [PLAN.md](P
 
 - [x] Xuất PDF A4 nhiều vé/trang (per_row x per_col)
 - [x] Kiểm tra layout: báo lỗi nếu không đủ chỗ
+- [x] Thêm mode xuất "vé thường" (PDF theo kích thước vé, mỗi vé 1 trang)
+- [x] Thêm mode xuất theo trang A4/A5 (auto-fit theo tickets_per_page)
+- [x] Preview khớp mode xuất (preview vé vs preview trang)
 
 ### M5 — Hoàn thiện UX + đóng gói (tuỳ chọn)
 
 - [x] Style UI (QSS)
+- [x] Popups/dialogs dễ đọc (QMessageBox/QFileDialog)
+- [x] Các nhóm tuỳ chọn dạng collapsible (mặc định thu gọn)
+- [x] Header block: đơn vị/logo, tên vòng, seed lớn
+- [x] Điều khiển cỡ chữ số + gap nhóm 3 hàng
+- [x] Preset container riêng + có preset mẫu
 - [ ] PyInstaller build (exe)
 - [ ] Bộ test cơ bản cho grid/layout
 

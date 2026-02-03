@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "template": {
+    "width_mm": 60.0,
+    "height_mm": 150.0,
+    "background_path": null
+  },
+  "header": {
+    "org_text": "CÔNG TY ABC\nChi nhánh 1",
+    "org_image_path": null,
+    "round_name": "VÒNG 12"
+  },
+  "grid": {
+    "rows": 15,
+    "cols": 6,
+    "padding_mm": 4.0,
+    "line_width_mm": 0.4,
+    "header_height_mm": 18.0,
+    "row_group_size": 3,
+    "row_group_gap_mm": 2.0,
+    "number_font_scale": 0.65
+  },
+  "print_spec": {
+    "mode": "PAGE",
+    "page_size": "A4",
+    "margin_mm": 5.0,
+    "spacing_mm": 2.0,
+    "tickets_per_page": 6
+  }
+}
