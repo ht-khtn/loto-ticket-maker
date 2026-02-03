@@ -35,6 +35,15 @@ class PdfExportResult:
 _PRINT_RENDER_SCALE = 8.0
 
 
+def _quality_scale(quality: str) -> float:
+    q = str(quality).upper().strip()
+    if q == "LOW":
+        return 4.0
+    if q == "MEDIUM":
+        return 6.0
+    return _PRINT_RENDER_SCALE
+
+
 def _page_mm_size(page_size: str, orientation: str) -> tuple[float, float]:
     name = page_size.upper().strip()
     w, h = (210.0, 297.0) if name != "A5" else (148.0, 210.0)
@@ -97,6 +106,8 @@ def export_tickets_pdf(
 
     seeds_it: Iterator[Optional[int]] | None = iter(seeds) if seeds is not None else None
 
+    quality_scale = _quality_scale(getattr(print_spec, "export_quality", "HIGH"))
+
     if mode == "TICKET":
         page_w = mm_to_pt(template.width_mm)
         page_h = mm_to_pt(template.height_mm)
@@ -115,7 +126,7 @@ def export_tickets_pdf(
                 header=header,
                 numbers=numbers,
                 seed=seed,
-                render_scale=_PRINT_RENDER_SCALE,
+                render_scale=quality_scale,
             )
             c.showPage()
             if progress_cb is not None:
@@ -189,7 +200,7 @@ def export_tickets_pdf(
             header=header,
             numbers=numbers,
             seed=seed,
-            render_scale=_PRINT_RENDER_SCALE * layout.scale,
+            render_scale=quality_scale * layout.scale,
         )
         last_page_index = max(last_page_index, idx // per_page)
 
@@ -223,6 +234,7 @@ def export_tickets_a4_pdf(
         margin_mm=print_spec.margin_mm,
         spacing_mm=print_spec.spacing_mm,
         tickets_per_page=max(1, int(getattr(print_spec, "tickets_per_page", 6))),
+        export_quality=getattr(print_spec, "export_quality", "MEDIUM"),
     )
     return export_tickets_pdf(
         out_path=out_path,

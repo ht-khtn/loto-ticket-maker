@@ -53,3 +53,4 @@ class PrintSpec:
     margin_mm: float = 8.0
     spacing_mm: float = 4.0
     tickets_per_page: int = 6
+    export_quality: str = "MEDIUM"  # LOW, MEDIUM, HIGH

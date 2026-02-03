@@ -31,4 +31,5 @@ DEFAULT_PRINT = PrintSpec(
     margin_mm=5.0,
     spacing_mm=2.0,
     tickets_per_page=6,
+    export_quality="MEDIUM",
 )

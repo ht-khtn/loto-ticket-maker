@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "template": {
     "width_mm": 100.0,
     "height_mm": 300.0,
@@ -27,7 +27,8 @@
     "orientation": "LANDSCAPE",
     "margin_mm": 5.0,
     "spacing_mm": 10.0,
-    "tickets_per_page": 4
+    "tickets_per_page": 4,
+    "export_quality": "MEDIUM"
   },
   "ui": {
     "seed": 1,

@@ -15,9 +15,77 @@ from typing import cast
 
 from PIL import Image, ImageDraw, ImageFont
 
-from ..core.grid_generator import generate_grid_rects_mm
+from ..core.grid_generator import RectMM, generate_grid_rects_mm
 from ..core.layout import compute_page_layout
 from ..core.models import GridSpec, PrintSpec, TicketHeaderSpec, TicketTemplateSpec
+
+_BG_CACHE: dict[tuple[str, int, int], Image.Image] = {}
+_ORG_IMAGE_CACHE: dict[str, Image.Image] = {}
+_ORG_THUMB_CACHE: dict[tuple[str, int, int], Image.Image] = {}
+_RECTS_CACHE: dict[tuple[float, float, int, int, float, float, float, float, int, float], list[RectMM]] = {}
+
+
+def _get_cached_bg(path: str, width_px: int, height_px: int) -> Image.Image | None:
+    key = (path, width_px, height_px)
+    cached = _BG_CACHE.get(key)
+    if cached is not None:
+        return cached
+    try:
+        bg = Image.open(path).convert("RGB")
+        bg = bg.resize((width_px, height_px), cast(int, Image.Resampling.LANCZOS))  # pyright: ignore[reportUnknownMemberType]
+        _BG_CACHE[key] = bg
+        return bg
+    except Exception:
+        return None
+
+
+def _get_cached_org_image(path: str) -> Image.Image | None:
+    cached = _ORG_IMAGE_CACHE.get(path)
+    if cached is not None:
+        return cached
+    try:
+        img = Image.open(path).convert("RGBA")
+        _ORG_IMAGE_CACHE[path] = img
+        return img
+    except Exception:
+        return None
+
+
+def _get_cached_org_thumb(path: str, max_w: int, max_h: int) -> Image.Image | None:
+    if max_w <= 0 or max_h <= 0:
+        return None
+    key = (path, max_w, max_h)
+    cached = _ORG_THUMB_CACHE.get(key)
+    if cached is not None:
+        return cached
+    base = _get_cached_org_image(path)
+    if base is None:
+        return None
+    img = base.copy()
+    img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
+    _ORG_THUMB_CACHE[key] = img
+    return img
+
+
+def _get_cached_rects(template: TicketTemplateSpec, grid: GridSpec) -> list[RectMM]:
+    key = (
+        float(template.width_mm),
+        float(template.height_mm),
+        int(grid.rows),
+        int(grid.cols),
+        float(grid.padding_mm),
+        float(grid.line_width_mm),
+        float(grid.header_height_mm),
+        float(grid.header_spacing_mm),
+        int(grid.row_group_size),
+        float(grid.row_group_gap_mm),
+    )
+    cached = _RECTS_CACHE.get(key)
+    if cached is not None:
+        return cached
+    rects = generate_grid_rects_mm(template, grid)
+    _RECTS_CACHE[key] = rects
+    return rects
 
 
 def _get_font(size_px: int) -> ImageFont.ImageFont:
@@ -222,12 +290,10 @@ def _draw_header(
 
     if header.org_image_path:
         try:
-            org_img = Image.open(header.org_image_path).convert("RGBA")
             max_img_w = int(right_col_w - 2 * gap)
             max_img_h = int(right_h)
-            if max_img_w > 0 and max_img_h > 0:
-                org_img.thumbnail((max_img_w, max_img_h), Image.Resampling.LANCZOS)
-                # Center image in the right column
+            org_img = _get_cached_org_thumb(header.org_image_path, max_img_w, max_img_h)
+            if org_img is not None:
                 img_x = int(right_x + (right_col_w - org_img.width) * 0.5)
                 img_y = int(right_y + (right_h - org_img.height) * 0.5)
                 img.paste(org_img, (img_x, img_y), org_img)
@@ -293,13 +359,9 @@ def render_ticket_preview(
 
     img = Image.new("RGB", (width_px, height_px), (255, 255, 255))
     if template.background_path:
-        try:
-            bg = Image.open(template.background_path).convert("RGB")
-            resample_filter = int(Image.Resampling.LANCZOS)  # type: ignore[reportUnknownMemberType]
-            bg = bg.resize((width_px, height_px), resample_filter)  # type: ignore[reportUnknownArgumentType]
+        bg = _get_cached_bg(template.background_path, width_px, height_px)
+        if bg is not None:
             img.paste(bg, (0, 0))
-        except Exception:
-            pass
     draw = ImageDraw.Draw(img)
 
     # ticket border
@@ -315,7 +377,7 @@ def render_ticket_preview(
     if header is not None:
         _draw_header(img, draw, template, grid, header, seed=seed, scale=scale, ref_scale=ref_scale)
 
-    rects = generate_grid_rects_mm(template, grid)
+    rects = _get_cached_rects(template, grid)
     stroke_w = max(1, int(grid.line_width_mm * scale))
     for rect in rects:
         x1 = rect.x * scale

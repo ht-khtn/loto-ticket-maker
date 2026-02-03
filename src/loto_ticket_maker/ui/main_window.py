@@ -458,12 +458,20 @@ class MainWindow(QMainWindow):
         self.spacing_mm.setValue(DEFAULT_PRINT.spacing_mm)
         lay.addWidget(self.spacing_mm, 9, 1)
 
+        lay.addWidget(QLabel("Chất lượng xuất"), 10, 0)
+        self.export_quality = QComboBox()
+        self.export_quality.addItem("Nhanh", "LOW")
+        self.export_quality.addItem("Cân bằng", "MEDIUM")
+        self.export_quality.addItem("Cao", "HIGH")
+        self._set_export_quality(str(DEFAULT_PRINT.export_quality))
+        lay.addWidget(self.export_quality, 10, 1)
+
         note = QLabel(
             "Theo trang: tự canh theo vé/trang. \nTheo vé: mỗi vé 1 trang đúng kích thước vé."
         )
         note.setWordWrap(True)
         note.setStyleSheet("color: #6B7280;")
-        lay.addWidget(note, 10, 0, 1, 2)
+        lay.addWidget(note, 11, 0, 1, 2)
         self._refresh_print_ui()
         return box
 
@@ -474,6 +482,14 @@ class MainWindow(QMainWindow):
                 self.page_orientation.setCurrentIndex(i)
                 return
         self.page_orientation.setCurrentIndex(0)
+
+    def _set_export_quality(self, quality: str) -> None:
+        value = str(quality).upper()
+        for i in range(self.export_quality.count()):
+            if str(self.export_quality.itemData(i)).upper() == value:
+                self.export_quality.setCurrentIndex(i)
+                return
+        self.export_quality.setCurrentIndex(1)
 
     def _refresh_print_ui(self) -> None:
         is_page = self.mode_page.isChecked()
@@ -519,6 +535,7 @@ class MainWindow(QMainWindow):
     def _current_print(self) -> PrintSpec:
         mode = "PAGE" if self.mode_page.isChecked() else "TICKET"
         orientation = str(self.page_orientation.currentData() or "PORTRAIT")
+        export_quality = str(self.export_quality.currentData() or "MEDIUM")
         return PrintSpec(
             mode=mode,
             page_size=str(self.page_size.currentText()),
@@ -526,6 +543,7 @@ class MainWindow(QMainWindow):
             margin_mm=float(self.margin_mm.value()),
             spacing_mm=float(self.spacing_mm.value()),
             tickets_per_page=int(self.tickets_per_page.value()),
+            export_quality=export_quality,
         )
 
     def _on_choose_background(self) -> None:
@@ -631,6 +649,7 @@ class MainWindow(QMainWindow):
         self.margin_mm.setValue(print_spec.margin_mm)
         self.spacing_mm.setValue(print_spec.spacing_mm)
         self.tickets_per_page.setValue(print_spec.tickets_per_page)
+        self._set_export_quality(str(print_spec.export_quality))
         self._refresh_print_ui()
 
     def _on_save_preset(self) -> None:

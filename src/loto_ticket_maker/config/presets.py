@@ -48,6 +48,7 @@ class PrintSpecDict(TypedDict):
     margin_mm: float
     spacing_mm: float
     tickets_per_page: int
+    export_quality: str
 
 
 class PresetDict(TypedDict):
@@ -64,7 +65,7 @@ class UiStateDict(TypedDict):
     ticket_count: int
 
 
-_PRESET_VERSION = 2
+_PRESET_VERSION = 3
 
 
 def save_preset(
@@ -107,6 +108,7 @@ def save_preset(
             "margin_mm": float(print_spec.margin_mm),
             "spacing_mm": float(print_spec.spacing_mm),
             "tickets_per_page": int(print_spec.tickets_per_page),
+            "export_quality": str(print_spec.export_quality),
         },
         "ui": {
             "seed": int(seed),
@@ -128,11 +130,11 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
     raw_obj = cast(dict[str, object], raw)
 
     version = raw_obj.get("version")
-    if not isinstance(version, int) or version not in (1, 2):
+    if not isinstance(version, int) or version not in (1, 2, 3):
         raise ValueError(f"Preset version không hỗ trợ: {version}")
 
     t_any = raw_obj.get("template")
-    h_any = raw_obj.get("header") if version == 2 else None
+    h_any = raw_obj.get("header") if version >= 2 else None
     g_any = raw_obj.get("grid")
     p_any = raw_obj.get("print_spec")
     ui_any = raw_obj.get("ui")
@@ -196,6 +198,7 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
     margin = p_obj.get("margin_mm")
     spacing = p_obj.get("spacing_mm")
     tickets_per_page = p_obj.get("tickets_per_page")
+    export_quality = p_obj.get("export_quality")
     if not isinstance(page_size, str):
         raise ValueError("PrintSpec không hợp lệ (page_size).")
     if not isinstance(orientation, str):
@@ -207,6 +210,8 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
         mode = PrintSpec().mode
     if not isinstance(tickets_per_page, int):
         tickets_per_page = PrintSpec().tickets_per_page
+    if not isinstance(export_quality, str):
+        export_quality = PrintSpec().export_quality
 
     template = TicketTemplateSpec(width_mm=float(width), height_mm=float(height), background_path=background_path)
     grid = GridSpec(
@@ -226,6 +231,7 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
         margin_mm=float(margin),
         spacing_mm=float(spacing),
         tickets_per_page=int(tickets_per_page),
+        export_quality=str(export_quality),
     )
 
     ui_seed = ui_obj.get("seed")
