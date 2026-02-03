@@ -75,78 +75,91 @@ def _draw_header(
     y2 = (grid.padding_mm + header_h_mm) * scale
 
     stroke_w = max(1, int(grid.line_width_mm * scale))
+    # Draw header box with rounded corners
     draw.rectangle([x1, y1, x2, y2], outline=(30, 41, 59), width=stroke_w)
 
     inner_w = max(1.0, x2 - x1)
     inner_h = max(1.0, y2 - y1)
-
-    left_w = inner_w * 0.62
-    right_w = inner_w - left_w
     gap = max(6.0, inner_w * 0.02)
 
+    # Left: seed + round_name (nằm gần nhau, không bị ảnh hưởng tên đơn vị)
+    left_col_w = inner_w * 0.35
     left_x = x1 + gap
-    left_y = y1 + gap
-    right_x = x1 + left_w + gap
-    right_y = y1 + gap
 
-    # Org image (optional)
-    if header.org_image_path:
-        try:
-            org_img = Image.open(header.org_image_path).convert("RGBA")
-            max_img_w = int(left_w - 2 * gap)
-            max_img_h = int(inner_h - 2 * gap)
-            if max_img_w > 0 and max_img_h > 0:
-                org_img.thumbnail((max_img_w, max_img_h))
-                img.paste(org_img, (int(left_x), int(left_y)), org_img)
-        except Exception:
-            pass
-    else:
-        # Org text (multiline, auto-fit per line)
-        lines = [ln.strip() for ln in header.org_text.splitlines() if ln.strip()]
-        if lines:
-            per_line_h = (inner_h - 2 * gap) / max(1, len(lines))
-            y = left_y
-            for line in lines[:6]:
-                font = _fit_font_for_text(
-                    draw,
-                    line,
-                    max_w=left_w - 2 * gap,
-                    max_h=per_line_h * 0.9,
-                    prefer_bold=False,
-                    min_size=8,
-                    max_size=int(per_line_h * 1.2),
-                )
-                draw.text((left_x, y), line, font=font, fill=(15, 23, 42))
-                y += per_line_h
+    # Right: org_text / org_image (bên phải, tách riêng)
+    right_col_w = inner_w - left_col_w - gap
+    right_x = x1 + left_col_w + gap
 
-    # Right: round name + big seed
-    round_text = header.round_name.strip()
-    if round_text:
-        font = _fit_font_for_text(
-            draw,
-            round_text,
-            max_w=right_w - 2 * gap,
-            max_h=inner_h * 0.35,
-            prefer_bold=True,
-            min_size=10,
-            max_size=int(inner_h * 0.35),
-        )
-        draw.text((right_x, right_y), round_text, font=font, fill=(15, 23, 42))
+    # LEFT COLUMN: Seed + Round Name (top-aligned, compact)
+    top_y = y1 + gap
+    available_h = inner_h - 2 * gap
 
+    # Show seed first (lớn, trên cùng)
     if seed is not None:
         seed_text = str(seed)
         font = _fit_font_for_text(
             draw,
             seed_text,
-            max_w=right_w - 2 * gap,
-            max_h=inner_h * 0.55,
+            max_w=left_col_w - 2 * gap,
+            max_h=available_h * 0.45,
             prefer_bold=True,
-            min_size=14,
-            max_size=int(inner_h * 0.7),
+            min_size=12,
+            max_size=int(available_h * 0.5),
         )
-        bbox = draw.textbbox((0, 0), seed_text, font=font)
-        th = bbox[3] - bbox[1]
-        draw.text((right_x, y2 - gap - th), seed_text, font=font, fill=(2, 132, 199))
+        draw.text((left_x, top_y), seed_text, font=font, fill=(2, 132, 199))
+        bbox = draw.textbbox((left_x, top_y), seed_text, font=font)
+        used_h = bbox[3] - bbox[1]
+        top_y += used_h + gap * 0.5
+
+    # Then round name (nhỏ hơn, phía dưới)
+    round_text = header.round_name.strip()
+    if round_text:
+        font = _fit_font_for_text(
+            draw,
+            round_text,
+            max_w=left_col_w - 2 * gap,
+            max_h=available_h * 0.35,
+            prefer_bold=True,
+            min_size=9,
+            max_size=int(available_h * 0.35),
+        )
+        draw.text((left_x, top_y), round_text, font=font, fill=(15, 23, 42))
+
+    # RIGHT COLUMN: Org image or org text (bên phải, tách riêt)
+    right_y = y1 + gap
+    right_h = inner_h - 2 * gap
+
+    if header.org_image_path:
+        try:
+            org_img = Image.open(header.org_image_path).convert("RGBA")
+            max_img_w = int(right_col_w - 2 * gap)
+            max_img_h = int(right_h)
+            if max_img_w > 0 and max_img_h > 0:
+                org_img.thumbnail((max_img_w, max_img_h), Image.Resampling.LANCZOS)
+                # Center image in the right column
+                img_x = int(right_x + (right_col_w - org_img.width) * 0.5)
+                img_y = int(right_y + (right_h - org_img.height) * 0.5)
+                img.paste(org_img, (img_x, img_y), org_img)
+        except Exception:
+            pass
+    else:
+        # Org text (multiline, auto-fit per line, right-aligned area)
+        lines = [ln.strip() for ln in header.org_text.splitlines() if ln.strip()]
+        if lines:
+            per_line_h = (right_h - 2 * gap) / max(1, len(lines))
+            y = right_y
+            for line in lines[:4]:
+                font = _fit_font_for_text(
+                    draw,
+                    line,
+                    max_w=right_col_w - 2 * gap,
+                    max_h=per_line_h * 0.9,
+                    prefer_bold=False,
+                    min_size=8,
+                    max_size=int(per_line_h * 1.1),
+                )
+                draw.text((right_x + gap, y), line, font=font, fill=(15, 23, 42))
+                y += per_line_h
 
 
 def render_ticket_preview(

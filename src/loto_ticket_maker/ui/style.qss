@@ -56,6 +56,32 @@ QSpinBox {
 
 QScrollArea {
   border: none;
+  background: transparent;
+}
+
+QScrollArea > QWidget > QWidget {
+  background: transparent;
+}
+
+QScrollBar:vertical {
+  background: #0B1220;
+  width: 12px;
+  border: none;
+}
+
+QScrollBar::handle:vertical {
+  background: #334155;
+  border-radius: 6px;
+  min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+  background: #475569;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+  border: none;
+  background: none;
 }
 
 /* Dialogs / popups readability */

@@ -4,7 +4,7 @@ from loto_ticket_maker.core.models import GridSpec, PrintSpec, TicketHeaderSpec,
 
 
 DEFAULT_TEMPLATE = TicketTemplateSpec(
-    width_mm=60.0,
+    width_mm=50.0,
     height_mm=150.0,
 )
 
@@ -24,7 +24,7 @@ DEFAULT_GRID = GridSpec(
 )
 
 DEFAULT_PRINT = PrintSpec(
-    mode="PAGE",
+    mode="TICKET",
     page_size="A4",
     margin_mm=5.0,
     spacing_mm=2.0,

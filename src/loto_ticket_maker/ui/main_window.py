@@ -72,29 +72,58 @@ class MainWindow(QMainWindow):
 
         layout = QHBoxLayout(root)
 
-        # Sidebar
-        sidebar = QFrame(root)
-        sidebar.setFrameShape(QFrame.Shape.StyledPanel)
-        sidebar.setProperty("panel", True)
-        sidebar.setFixedWidth(360)
-        sidebar_layout = QVBoxLayout(sidebar)
+        # Sidebar with 2 columns and scroll (2/3 of screen)
+        sidebar_scroll = QScrollArea(root)
+        sidebar_scroll.setWidgetResizable(True)
+        sidebar_inner = QWidget()
+        sidebar_layout = QHBoxLayout(sidebar_inner)
+        sidebar_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar_layout.setSpacing(8)
 
-        sidebar_layout.addWidget(self._build_preset_group(sidebar))
-        sidebar_layout.addWidget(self._build_template_group(sidebar))
-        sidebar_layout.addWidget(self._build_header_group(sidebar))
-        sidebar_layout.addWidget(self._build_grid_group(sidebar))
-        sidebar_layout.addWidget(self._build_print_group(sidebar))
+        # Left column
+        left_col = QWidget()
+        left_col_layout = QVBoxLayout(left_col)
+        left_col_layout.setContentsMargins(0, 0, 0, 0)
+        left_col_layout.addWidget(self._build_preset_group(left_col))
+        left_col_layout.addWidget(self._build_template_group(left_col))
+        left_col_layout.addWidget(self._build_header_group(left_col))
+        left_col_layout.addStretch(1)
 
+        # Right column
+        right_col = QWidget()
+        right_col_layout = QVBoxLayout(right_col)
+        right_col_layout.setContentsMargins(0, 0, 0, 0)
+        right_col_layout.addWidget(self._build_grid_group(right_col))
+        right_col_layout.addWidget(self._build_print_group(right_col))
+        right_col_layout.addStretch(1)
+
+        sidebar_layout.addWidget(left_col, 1)
+        sidebar_layout.addWidget(right_col, 1)
+
+        # Buttons (below columns)
+        btn_container = QWidget()
+        btn_layout = QHBoxLayout(btn_container)
+        btn_layout.setContentsMargins(0, 0, 0, 0)
         btn_generate = QPushButton("Tạo vé (preview)")
         btn_export = QPushButton("Xuất PDF")
-        sidebar_layout.addWidget(btn_generate)
-        sidebar_layout.addWidget(btn_export)
-        sidebar_layout.addStretch(1)
+        btn_layout.addWidget(btn_generate)
+        btn_layout.addWidget(btn_export)
+        btn_layout.addStretch(1)
 
         btn_generate.clicked.connect(self._on_generate_preview)
         btn_export.clicked.connect(self._on_export_pdf)
 
-        # Preview area
+        # Wrap sidebar content with buttons
+        sidebar_outer = QWidget()
+        sidebar_outer_layout = QVBoxLayout(sidebar_outer)
+        sidebar_outer_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar_outer_layout.addWidget(sidebar_scroll, 1)
+        sidebar_outer_layout.addWidget(btn_container)
+
+        sidebar_scroll.setWidget(sidebar_inner)
+        layout.addWidget(sidebar_outer, 2)
+
+        # Preview area (1/3 of screen)
         preview_container = QFrame(root)
         preview_container.setFrameShape(QFrame.Shape.StyledPanel)
         preview_container.setProperty("panel", True)
@@ -120,27 +149,11 @@ class MainWindow(QMainWindow):
         preview_layout.addWidget(title)
         preview_layout.addWidget(scroll)
 
-        layout.addWidget(sidebar)
         layout.addWidget(preview_container, 1)
 
-    def _build_collapsible_group(self, title: str, parent: QWidget, expanded: bool = False) -> tuple[QGroupBox, QWidget]:
-        box = QGroupBox(title, parent)
-        box.setCheckable(True)
-        box.setChecked(expanded)
-        outer = QVBoxLayout(box)
-        inner = QWidget(box)
-        outer.addWidget(inner)
-
-        def _on_toggled(checked: bool) -> None:
-            inner.setVisible(checked)
-
-        box.toggled.connect(_on_toggled)
-        inner.setVisible(expanded)
-        return box, inner
-
     def _build_preset_group(self, parent: QWidget) -> QGroupBox:
-        box, inner = self._build_collapsible_group("Preset", parent, expanded=False)
-        lay = QGridLayout(inner)
+        box = QGroupBox("Preset", parent)
+        lay = QGridLayout(box)
 
         btn_load = QPushButton("Mở preset…")
         btn_save = QPushButton("Lưu preset…")
@@ -155,8 +168,8 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_template_group(self, parent: QWidget) -> QGroupBox:
-        box, inner = self._build_collapsible_group("Nền vé (template)", parent, expanded=False)
-        lay = QGridLayout(inner)
+        box = QGroupBox("Nền vé (template)", parent)
+        lay = QGridLayout(box)
 
         lay.addWidget(QLabel("Rộng (mm)"), 0, 0)
         self.template_w = QDoubleSpinBox()
@@ -191,32 +204,32 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_header_group(self, parent: QWidget) -> QGroupBox:
-        box, inner = self._build_collapsible_group("Header (thông tin trên vé)", parent, expanded=False)
-        lay = QGridLayout(inner)
+        box = QGroupBox("Header (thông tin trên vé)", parent)
+        lay = QGridLayout(box)
 
-        lay.addWidget(QLabel("Đơn vị / tổ chức"), 0, 0, 1, 2)
+        lay.addWidget(QLabel("Tên vòng"), 0, 0)
+        self.round_name = QLineEdit()
+        self.round_name.setPlaceholderText("Ví dụ: VÒNG 12")
+        lay.addWidget(self.round_name, 0, 1)
+
+        lay.addWidget(QLabel("Đơn vị / tổ chức"), 1, 0)
         self.org_text = QPlainTextEdit()
         self.org_text.setPlaceholderText("Ví dụ:\nCÔNG TY ABC\nCHI NHÁNH 1")
         self.org_text.setFixedHeight(90)
-        lay.addWidget(self.org_text, 1, 0, 1, 2)
+        lay.addWidget(self.org_text, 2, 0, 1, 2)
 
-        lay.addWidget(QLabel("Hoặc logo/ảnh"), 2, 0)
+        lay.addWidget(QLabel("Hoặc logo/ảnh"), 3, 0)
         self.org_image_label = QLabel("(không có)")
         self.org_image_label.setWordWrap(True)
         self.org_image_label.setStyleSheet("color: #93C5FD;")
-        lay.addWidget(self.org_image_label, 2, 1)
+        lay.addWidget(self.org_image_label, 3, 1)
 
         btn_org_img = QPushButton("Chọn ảnh…")
         btn_org_img_clear = QPushButton("Xoá")
         btn_org_img.clicked.connect(self._on_choose_org_image)
         btn_org_img_clear.clicked.connect(self._on_clear_org_image)
-        lay.addWidget(btn_org_img, 3, 0)
-        lay.addWidget(btn_org_img_clear, 3, 1)
-
-        lay.addWidget(QLabel("Tên vòng"), 4, 0)
-        self.round_name = QLineEdit()
-        self.round_name.setPlaceholderText("Ví dụ: VÒNG 12")
-        lay.addWidget(self.round_name, 4, 1)
+        lay.addWidget(btn_org_img, 4, 0)
+        lay.addWidget(btn_org_img_clear, 4, 1)
 
         lay.addWidget(QLabel("Cỡ chữ số"), 5, 0)
         self.number_font_scale = QDoubleSpinBox()
@@ -229,8 +242,8 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_grid_group(self, parent: QWidget) -> QGroupBox:
-        box, inner = self._build_collapsible_group("Ô số (grid)", parent, expanded=False)
-        lay = QGridLayout(inner)
+        box = QGroupBox("Ô số (grid)", parent)
+        lay = QGridLayout(box)
 
         lay.addWidget(QLabel("Hàng × Cột"), 0, 0)
         row_wrap = QWidget()
@@ -287,8 +300,8 @@ class MainWindow(QMainWindow):
         return box
 
     def _build_print_group(self, parent: QWidget) -> QGroupBox:
-        box, inner = self._build_collapsible_group("In ấn (PDF)", parent, expanded=False)
-        lay = QGridLayout(inner)
+        box = QGroupBox("In ấn (PDF)", parent)
+        lay = QGridLayout(box)
 
         lay.addWidget(QLabel("Chế độ xuất"), 0, 0)
         mode_wrap = QWidget()
