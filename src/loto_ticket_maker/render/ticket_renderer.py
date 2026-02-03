@@ -76,43 +76,29 @@ def _draw_header(
 
     stroke_w = max(1, int(grid.line_width_mm * scale))
     # Draw header box with rounded corners
-    draw.rectangle([x1, y1, x2, y2], outline=(30, 41, 59), width=stroke_w)
+    radius = max(2, int(min(x2 - x1, y2 - y1) * 0.08))
+    try:
+        draw.rounded_rectangle([x1, y1, x2, y2], radius=radius, outline=(30, 41, 59), width=stroke_w)
+    except Exception:
+        draw.rectangle([x1, y1, x2, y2], outline=(30, 41, 59), width=stroke_w)
 
     inner_w = max(1.0, x2 - x1)
     inner_h = max(1.0, y2 - y1)
     gap = max(6.0, inner_w * 0.02)
 
-    # Left: seed + round_name (nằm gần nhau, không bị ảnh hưởng tên đơn vị)
-    left_col_w = inner_w * 0.35
+    # Left: round_name + seed (nằm gần nhau, không bị ảnh hưởng tên đơn vị)
+    left_col_w = inner_w * 0.34
     left_x = x1 + gap
 
     # Right: org_text / org_image (bên phải, tách riêng)
     right_col_w = inner_w - left_col_w - gap
     right_x = x1 + left_col_w + gap
 
-    # LEFT COLUMN: Seed + Round Name (top-aligned, compact)
+    # LEFT COLUMN: Round Name (top) + Seed (below)
     top_y = y1 + gap
     available_h = inner_h - 2 * gap
 
-    # Show seed first (lớn, trên cùng)
-    if seed is not None:
-        seed_text = str(seed)
-        font = _fit_font_for_text(
-            draw,
-            seed_text,
-            max_w=left_col_w - 2 * gap,
-            max_h=available_h * 0.45,
-            prefer_bold=True,
-            min_size=12,
-            max_size=int(available_h * 0.5),
-        )
-        draw.text((left_x, top_y), seed_text, font=font, fill=(2, 132, 199))
-        bbox = draw.textbbox((left_x, top_y), seed_text, font=font)
-        used_h = bbox[3] - bbox[1]
-        top_y += used_h + gap * 0.5
-
-    # Then round name (nhỏ hơn, phía dưới)
-    round_text = header.round_name.strip()
+    round_text = header.round_name
     if round_text:
         font = _fit_font_for_text(
             draw,
@@ -120,12 +106,29 @@ def _draw_header(
             max_w=left_col_w - 2 * gap,
             max_h=available_h * 0.35,
             prefer_bold=True,
-            min_size=9,
-            max_size=int(available_h * 0.35),
+            min_size=10,
+            max_size=int(available_h * 0.4),
         )
         draw.text((left_x, top_y), round_text, font=font, fill=(15, 23, 42))
+        bbox = draw.textbbox((left_x, top_y), round_text, font=font)
+        top_y = bbox[3] + gap * 0.3
 
-    # RIGHT COLUMN: Org image or org text (bên phải, tách riêt)
+    if seed is not None:
+        seed_text = str(seed)
+        if header.seed_pad_length > 0:
+            seed_text = seed_text.zfill(header.seed_pad_length)
+        font = _fit_font_for_text(
+            draw,
+            seed_text,
+            max_w=left_col_w - 2 * gap,
+            max_h=available_h * 0.55,
+            prefer_bold=True,
+            min_size=12,
+            max_size=int(available_h * 0.6),
+        )
+        draw.text((left_x, top_y), seed_text, font=font, fill=(2, 132, 199))
+
+    # RIGHT COLUMN: Org image or org text (bên phải, tách riêng)
     right_y = y1 + gap
     right_h = inner_h - 2 * gap
 
@@ -143,12 +146,14 @@ def _draw_header(
         except Exception:
             pass
     else:
-        # Org text (multiline, auto-fit per line, right-aligned area)
-        lines = [ln.strip() for ln in header.org_text.splitlines() if ln.strip()]
+        # Org text (multiline, giữ nguyên khoảng trắng, canh giữa theo chiều dọc)
+        lines = header.org_text.splitlines()
+        lines = lines[:6]
         if lines:
-            per_line_h = (right_h - 2 * gap) / max(1, len(lines))
-            y = right_y
-            for line in lines[:4]:
+            per_line_h = min(right_h / max(1, len(lines)), right_h * 0.3)
+            total_h = per_line_h * len(lines)
+            y = right_y + (right_h - total_h) / 2
+            for line in lines:
                 font = _fit_font_for_text(
                     draw,
                     line,
@@ -212,7 +217,7 @@ def render_ticket_preview(
         first = rects[0] if rects else None
         cell_w_px = (first.w * scale) if first else 40.0
         cell_h_px = (first.h * scale) if first else 40.0
-        font_size = max(10, int(min(cell_w_px, cell_h_px) * float(grid.number_font_scale)))
+        font_size = max(10, int(min(cell_w_px, cell_h_px) * 0.55))
         font = _get_font(font_size)
 
         for r in range(min(grid.rows, len(numbers))):

@@ -11,10 +11,13 @@ Sau đó:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from typing import Optional
 
 from reportlab.lib.pagesizes import A4, A5
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from ..core.grid_generator import generate_grid_rects_mm
@@ -30,6 +33,32 @@ def mm_to_pt(mm: float) -> float:
 @dataclass(frozen=True)
 class PdfExportResult:
     path: str
+
+
+_font_regular = "Helvetica"
+_font_bold = "Helvetica-Bold"
+
+
+def _ensure_fonts() -> tuple[str, str]:
+    global _font_regular, _font_bold
+
+    arial = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", "arial.ttf")
+    arial_bold = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", "arialbd.ttf")
+
+    try:
+        if os.path.exists(arial) and "Arial" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("Arial", arial))  # type: ignore[reportUnknownMemberType]
+        if os.path.exists(arial_bold) and "Arial-Bold" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("Arial-Bold", arial_bold))  # type: ignore[reportUnknownMemberType]
+        if "Arial" in pdfmetrics.getRegisteredFontNames():
+            _font_regular = "Arial"
+        if "Arial-Bold" in pdfmetrics.getRegisteredFontNames():
+            _font_bold = "Arial-Bold"
+    except Exception:
+        _font_regular = "Helvetica"
+        _font_bold = "Helvetica-Bold"
+
+    return _font_regular, _font_bold
 
 
 def _page_mm_size(page_size: str) -> tuple[float, float]:
@@ -78,26 +107,69 @@ def _draw_header(
     y_top = ticket_h - pad
     y1 = y_top - mm_to_pt(header_h_mm)
 
-    c.rect(x1, y1, x2 - x1, y_top - y1)
+    radius = mm_to_pt(2.0)
+    try:
+        c.roundRect(x1, y1, x2 - x1, y_top - y1, radius)
+    except Exception:
+        c.rect(x1, y1, x2 - x1, y_top - y1)
 
     inner_w = max(1.0, x2 - x1)
     inner_h = max(1.0, y_top - y1)
     gap = max(4.0, inner_w * 0.02)
 
-    left_w = inner_w * 0.62
+    left_w = inner_w * 0.34
     right_w = inner_w - left_w
 
     left_x = x1 + gap
     right_x = x1 + left_w + gap
 
-    # Left: org image or org text
+    regular_font, bold_font = _ensure_fonts()
+
+    # LEFT COLUMN: Round Name (top) + Seed (below)
+    top_y = y_top - gap
+    available_h = inner_h - 2 * gap
+
+    round_text = header.round_name
+    if round_text:
+        size = _fit_font_size(
+            c,
+            round_text,
+            font_name=bold_font,
+            max_w=left_w - 2 * gap,
+            max_h=available_h * 0.35,
+            min_size=10,
+            max_size=int(available_h * 0.4),
+        )
+        c.setFont(bold_font, size)
+        c.drawString(left_x, top_y - size, round_text)
+        top_y = top_y - size - gap * 0.4
+
+    if seed is not None:
+        seed_text = str(seed)
+        if header.seed_pad_length > 0:
+            seed_text = seed_text.zfill(header.seed_pad_length)
+        size = _fit_font_size(
+            c,
+            seed_text,
+            font_name=bold_font,
+            max_w=left_w - 2 * gap,
+            max_h=available_h * 0.55,
+            min_size=12,
+            max_size=int(available_h * 0.6),
+        )
+        c.setFont(bold_font, size)
+        c.setFillColorRGB(0.01, 0.52, 0.78)
+        c.drawString(left_x, top_y - size, seed_text)
+        c.setFillColorRGB(0, 0, 0)
+
+    # RIGHT COLUMN: Org image or org text
     if header.org_image_path:
         try:
             c.drawImage(  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
                 ImageReader(header.org_image_path),
-                left_x,
+                right_x + gap,
                 y1 + gap,
-                width=left_w - 2 * gap,
+                width=right_w - 2 * gap,
                 height=inner_h - 2 * gap,
                 preserveAspectRatio=True,
                 anchor="c",
@@ -106,57 +178,25 @@ def _draw_header(
         except Exception:
             pass
     else:
-        lines = [ln.strip() for ln in header.org_text.splitlines() if ln.strip()]
+        lines = header.org_text.splitlines()
+        lines = lines[:6]
         if lines:
-            per_line_h = (inner_h - 2 * gap) / max(1, len(lines))
-            y = y_top - gap - per_line_h
-            for line in lines[:6]:
-                font_name = "Helvetica"
+            per_line_h = min(inner_h / max(1, len(lines)), inner_h * 0.3)
+            total_h = per_line_h * len(lines)
+            y = y1 + (inner_h - total_h) / 2
+            for line in lines:
                 size = _fit_font_size(
                     c,
                     line,
-                    font_name=font_name,
-                    max_w=left_w - 2 * gap,
+                    font_name=regular_font,
+                    max_w=right_w - 2 * gap,
                     max_h=per_line_h * 0.9,
                     min_size=8,
-                    max_size=int(per_line_h * 1.2),
+                    max_size=int(per_line_h * 1.1),
                 )
-                c.setFont(font_name, size)
-                c.drawString(left_x, y + (per_line_h - size) * 0.2, line)
-                y -= per_line_h
-
-    # Right: round name + big seed
-    round_text = header.round_name.strip()
-    if round_text:
-        font_name = "Helvetica-Bold"
-        size = _fit_font_size(
-            c,
-            round_text,
-            font_name=font_name,
-            max_w=right_w - 2 * gap,
-            max_h=inner_h * 0.35,
-            min_size=10,
-            max_size=int(inner_h * 0.35),
-        )
-        c.setFont(font_name, size)
-        c.drawString(right_x, y_top - gap - size, round_text)
-
-    if seed is not None:
-        seed_text = str(seed)
-        font_name = "Helvetica-Bold"
-        size = _fit_font_size(
-            c,
-            seed_text,
-            font_name=font_name,
-            max_w=right_w - 2 * gap,
-            max_h=inner_h * 0.55,
-            min_size=14,
-            max_size=int(inner_h * 0.7),
-        )
-        c.setFont(font_name, size)
-        c.setFillColorRGB(0.01, 0.52, 0.78)
-        c.drawString(right_x, y1 + gap, seed_text)
-        c.setFillColorRGB(0, 0, 0)
+                c.setFont(regular_font, size)
+                c.drawString(right_x + gap, y + (per_line_h - size) * 0.2, line)
+                y += per_line_h
 
 
 def _draw_ticket_at_origin(
@@ -204,8 +244,9 @@ def _draw_ticket_at_origin(
 
     # Font size theo chiều cao ô
     cell_h_pt = mm_to_pt(rects[0].h) if rects else mm_to_pt(8.0)
-    font_size = max(8, min(28, int(cell_h_pt * float(grid.number_font_scale))))
-    c.setFont("Helvetica-Bold", font_size)
+    _, bold_font = _ensure_fonts()
+    font_size = max(8, min(28, int(cell_h_pt * 0.55)))
+    c.setFont(bold_font, font_size)
 
     for r in range(min(grid.rows, len(numbers))):
         row = numbers[r]

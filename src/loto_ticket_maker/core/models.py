@@ -22,6 +22,7 @@ class TicketHeaderSpec:
     org_text: str = ""  # nhiều dòng, mỗi dòng auto-fit
     org_image_path: str | None = None
     round_name: str = ""
+    seed_pad_length: int = 0
 
 
 @dataclass(frozen=True)
@@ -33,13 +34,11 @@ class GridSpec:
 
     # Header nằm trên grid (đóng khung, cùng bề rộng với grid)
     header_height_mm: float = 18.0
+    header_spacing_mm: float = 2.0
 
     # Nhóm hàng (RULE.md: nhóm 3 hàng) và khoảng cách giữa các nhóm
     row_group_size: int = 3
     row_group_gap_mm: float = 2.0
-
-    # Tỉ lệ cỡ chữ số trong ô (so với chiều cao ô)
-    number_font_scale: float = 0.55
 
 
 @dataclass(frozen=True)

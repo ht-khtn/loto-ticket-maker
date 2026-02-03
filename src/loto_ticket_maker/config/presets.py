@@ -26,6 +26,7 @@ class TicketHeaderSpecDict(TypedDict):
     org_text: str
     org_image_path: str | None
     round_name: str
+    seed_pad_length: int
 
 
 class GridSpecDict(TypedDict):
@@ -35,9 +36,9 @@ class GridSpecDict(TypedDict):
     line_width_mm: float
 
     header_height_mm: float
+    header_spacing_mm: float
     row_group_size: int
     row_group_gap_mm: float
-    number_font_scale: float
 
 
 class PrintSpecDict(TypedDict):
@@ -77,6 +78,7 @@ def save_preset(
             "org_text": str(header.org_text),
             "org_image_path": header.org_image_path,
             "round_name": str(header.round_name),
+            "seed_pad_length": int(header.seed_pad_length),
         },
         "grid": {
             "rows": int(grid.rows),
@@ -85,9 +87,9 @@ def save_preset(
             "line_width_mm": float(grid.line_width_mm),
 
             "header_height_mm": float(grid.header_height_mm),
+            "header_spacing_mm": float(grid.header_spacing_mm),
             "row_group_size": int(grid.row_group_size),
             "row_group_gap_mm": float(grid.row_group_gap_mm),
-            "number_font_scale": float(grid.number_font_scale),
         },
         "print_spec": {
             "mode": str(print_spec.mode),
@@ -139,11 +141,13 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
     org_text = h_obj.get("org_text")
     org_image_path = h_obj.get("org_image_path")
     round_name = h_obj.get("round_name")
+    seed_pad_length = h_obj.get("seed_pad_length")
 
     header = TicketHeaderSpec(
         org_text=str(org_text) if isinstance(org_text, str) else "",
         org_image_path=str(org_image_path) if isinstance(org_image_path, str) and org_image_path.strip() else None,
         round_name=str(round_name) if isinstance(round_name, str) else "",
+        seed_pad_length=int(seed_pad_length) if isinstance(seed_pad_length, int) else 0,
     )
 
     rows = g_obj.get("rows")
@@ -156,19 +160,19 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
         raise ValueError("GridSpec không hợp lệ (padding_mm/line_width_mm).")
 
     header_height_mm = g_obj.get("header_height_mm")
+    header_spacing_mm = g_obj.get("header_spacing_mm")
     row_group_size = g_obj.get("row_group_size")
     row_group_gap_mm = g_obj.get("row_group_gap_mm")
-    number_font_scale = g_obj.get("number_font_scale")
 
     # v1 preset không có các field này -> dùng default
     if not isinstance(header_height_mm, (int, float)):
         header_height_mm = GridSpec().header_height_mm
+    if not isinstance(header_spacing_mm, (int, float)):
+        header_spacing_mm = GridSpec().header_spacing_mm
     if not isinstance(row_group_size, int):
         row_group_size = GridSpec().row_group_size
     if not isinstance(row_group_gap_mm, (int, float)):
         row_group_gap_mm = GridSpec().row_group_gap_mm
-    if not isinstance(number_font_scale, (int, float)):
-        number_font_scale = GridSpec().number_font_scale
 
     mode = p_obj.get("mode")
     page_size = p_obj.get("page_size")
@@ -192,9 +196,9 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
         padding_mm=float(padding),
         line_width_mm=float(line_w),
         header_height_mm=float(header_height_mm),
+        header_spacing_mm=float(header_spacing_mm),
         row_group_size=int(row_group_size),
         row_group_gap_mm=float(row_group_gap_mm),
-        number_font_scale=float(number_font_scale),
     )
     print_spec = PrintSpec(
         mode=str(mode),

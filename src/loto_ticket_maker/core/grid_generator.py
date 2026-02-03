@@ -27,10 +27,13 @@ def generate_grid_rects_mm(template: TicketTemplateSpec, grid: GridSpec) -> list
 
     Grid rects chỉ bao gồm vùng ô số (không bao gồm header).
     """
+    header_h = max(0.0, grid.header_height_mm)
+    header_gap = max(0.0, grid.header_spacing_mm)
+
     content_x = grid.padding_mm
-    content_y = grid.padding_mm + max(0.0, grid.header_height_mm)
+    content_y = grid.padding_mm + header_h + header_gap
     content_w = template.width_mm - 2 * grid.padding_mm
-    content_h = template.height_mm - 2 * grid.padding_mm - max(0.0, grid.header_height_mm)
+    content_h = template.height_mm - 2 * grid.padding_mm - header_h - header_gap
 
     if grid.rows <= 0 or grid.cols <= 0:
         return []

@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 import random
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -30,13 +30,14 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QRadioButton,
+    QSlider,
     QScrollArea,
     QFileDialog,
     QVBoxLayout,
     QWidget,
 )
 
-from ..config.defaults import DEFAULT_GRID, DEFAULT_PRINT, DEFAULT_TEMPLATE
+from ..config.defaults import DEFAULT_GRID, DEFAULT_HEADER, DEFAULT_PRINT, DEFAULT_TEMPLATE
 from ..config.presets import load_preset, save_preset
 from ..core.loto_15x6 import generate_loto_15x6
 from ..core.models import GridSpec, PrintSpec, TicketHeaderSpec, TicketTemplateSpec
@@ -56,6 +57,10 @@ class MainWindow(QMainWindow):
         self._org_image_path: str | None = None
         self._last_preview: QPixmap | None = None
         self._last_seed: int | None = None
+        self._preview_timer = QTimer(self)
+        self._preview_timer.setSingleShot(True)
+        self._preview_timer.setInterval(200)
+        self._preview_timer.timeout.connect(self._update_preview)
 
         root = QWidget(self)
         self.setCentralWidget(root)
@@ -104,13 +109,10 @@ class MainWindow(QMainWindow):
         btn_container = QWidget()
         btn_layout = QHBoxLayout(btn_container)
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_generate = QPushButton("Tạo vé (preview)")
         btn_export = QPushButton("Xuất PDF")
-        btn_layout.addWidget(btn_generate)
         btn_layout.addWidget(btn_export)
         btn_layout.addStretch(1)
 
-        btn_generate.clicked.connect(self._on_generate_preview)
         btn_export.clicked.connect(self._on_export_pdf)
 
         # Wrap sidebar content with buttons
@@ -133,6 +135,21 @@ class MainWindow(QMainWindow):
         title.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         title.setStyleSheet("font-size: 18px; font-weight: 600;")
 
+        zoom_wrap = QWidget()
+        zoom_layout = QHBoxLayout(zoom_wrap)
+        zoom_layout.setContentsMargins(0, 0, 0, 0)
+        zoom_layout.addWidget(title)
+        zoom_layout.addStretch(1)
+        zoom_label = QLabel("Zoom")
+        self.zoom_value = QLabel("100%")
+        self.zoom_slider = QSlider(Qt.Orientation.Horizontal)
+        self.zoom_slider.setRange(50, 200)
+        self.zoom_slider.setValue(100)
+        self.zoom_slider.valueChanged.connect(self._on_zoom_changed)
+        zoom_layout.addWidget(zoom_label)
+        zoom_layout.addWidget(self.zoom_slider)
+        zoom_layout.addWidget(self.zoom_value)
+
         self.preview_label = QLabel("Bấm 'Tạo vé (preview)' để xem vé 15x6")
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setMinimumHeight(500)
@@ -146,10 +163,13 @@ class MainWindow(QMainWindow):
         inner_layout.addStretch(1)
         scroll.setWidget(inner)
 
-        preview_layout.addWidget(title)
+        preview_layout.addWidget(zoom_wrap)
         preview_layout.addWidget(scroll)
 
         layout.addWidget(preview_container, 1)
+
+        self._connect_auto_preview()
+        self._schedule_preview()
 
     def _build_preset_group(self, parent: QWidget) -> QGroupBox:
         box = QGroupBox("Preset", parent)
@@ -231,13 +251,11 @@ class MainWindow(QMainWindow):
         lay.addWidget(btn_org_img, 4, 0)
         lay.addWidget(btn_org_img_clear, 4, 1)
 
-        lay.addWidget(QLabel("Cỡ chữ số"), 5, 0)
-        self.number_font_scale = QDoubleSpinBox()
-        self.number_font_scale.setRange(0.35, 0.95)
-        self.number_font_scale.setDecimals(2)
-        self.number_font_scale.setSingleStep(0.05)
-        self.number_font_scale.setValue(DEFAULT_GRID.number_font_scale)
-        lay.addWidget(self.number_font_scale, 5, 1)
+        lay.addWidget(QLabel("Seed pad (số ký tự)"), 5, 0)
+        self.seed_pad_length = QSpinBox()
+        self.seed_pad_length.setRange(0, 12)
+        self.seed_pad_length.setValue(DEFAULT_HEADER.seed_pad_length)
+        lay.addWidget(self.seed_pad_length, 5, 1)
 
         return box
 
@@ -283,20 +301,28 @@ class MainWindow(QMainWindow):
         self.header_height_mm.setValue(DEFAULT_GRID.header_height_mm)
         lay.addWidget(self.header_height_mm, 4, 1)
 
-        lay.addWidget(QLabel("Gap nhóm 3 hàng (mm)"), 5, 0)
+        lay.addWidget(QLabel("Khoảng cách header (mm)"), 5, 0)
+        self.header_spacing_mm = QDoubleSpinBox()
+        self.header_spacing_mm.setRange(0.0, 20.0)
+        self.header_spacing_mm.setDecimals(1)
+        self.header_spacing_mm.setSingleStep(0.5)
+        self.header_spacing_mm.setValue(DEFAULT_GRID.header_spacing_mm)
+        lay.addWidget(self.header_spacing_mm, 5, 1)
+
+        lay.addWidget(QLabel("Gap nhóm 3 hàng (mm)"), 6, 0)
         self.row_group_gap_mm = QDoubleSpinBox()
         self.row_group_gap_mm.setRange(0.0, 20.0)
         self.row_group_gap_mm.setDecimals(1)
         self.row_group_gap_mm.setSingleStep(0.5)
         self.row_group_gap_mm.setValue(DEFAULT_GRID.row_group_gap_mm)
-        lay.addWidget(self.row_group_gap_mm, 5, 1)
+        lay.addWidget(self.row_group_gap_mm, 6, 1)
 
         hint = QLabel(
             "Luật đang dùng: 15x6 (đủ 1..60, mỗi hàng 2 ô trống, trống theo cột 6-5-5-5-5-4)"
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #6B7280;")
-        lay.addWidget(hint, 6, 0, 1, 2)
+        lay.addWidget(hint, 7, 0, 1, 2)
         return box
 
     def _build_print_group(self, parent: QWidget) -> QGroupBox:
@@ -380,6 +406,7 @@ class MainWindow(QMainWindow):
             org_text=str(self.org_text.toPlainText()),
             org_image_path=self._org_image_path,
             round_name=str(self.round_name.text()),
+            seed_pad_length=int(self.seed_pad_length.value()),
         )
 
     def _current_grid(self) -> GridSpec:
@@ -389,9 +416,9 @@ class MainWindow(QMainWindow):
             padding_mm=DEFAULT_GRID.padding_mm,
             line_width_mm=DEFAULT_GRID.line_width_mm,
             header_height_mm=float(self.header_height_mm.value()),
+            header_spacing_mm=float(self.header_spacing_mm.value()),
             row_group_size=DEFAULT_GRID.row_group_size,
             row_group_gap_mm=float(self.row_group_gap_mm.value()),
-            number_font_scale=float(self.number_font_scale.value()),
         )
 
     def _current_print(self) -> PrintSpec:
@@ -415,10 +442,12 @@ class MainWindow(QMainWindow):
             return
         self._background_path = path
         self._refresh_template_ui()
+        self._schedule_preview()
 
     def _on_clear_background(self) -> None:
         self._background_path = None
         self._refresh_template_ui()
+        self._schedule_preview()
 
     def _on_choose_org_image(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -431,10 +460,12 @@ class MainWindow(QMainWindow):
             return
         self._org_image_path = path
         self.org_image_label.setText(path)
+        self._schedule_preview()
 
     def _on_clear_org_image(self) -> None:
         self._org_image_path = None
         self.org_image_label.setText("(không có)")
+        self._schedule_preview()
 
     def _on_load_sample_preset(self) -> None:
         sample_path = Path(__file__).resolve().parents[3] / "assets" / "presets" / "sample_preset.json"
@@ -482,13 +513,14 @@ class MainWindow(QMainWindow):
         self._org_image_path = header.org_image_path
         self.org_image_label.setText(header.org_image_path or "(không có)")
         self.round_name.setText(header.round_name)
+        self.seed_pad_length.setValue(header.seed_pad_length)
 
         # Grid cố định 15x6 theo RULE.md
         self.rows.setValue(grid.rows)
         self.cols.setValue(grid.cols)
         self.header_height_mm.setValue(grid.header_height_mm)
+        self.header_spacing_mm.setValue(grid.header_spacing_mm)
         self.row_group_gap_mm.setValue(grid.row_group_gap_mm)
-        self.number_font_scale.setValue(grid.number_font_scale)
 
         mode = str(print_spec.mode).upper()
         self.mode_ticket.setChecked(mode == "TICKET")
@@ -515,14 +547,48 @@ class MainWindow(QMainWindow):
             return
         QMessageBox.information(self, "OK", f"Đã lưu preset: {path}")
 
-    def _on_generate_preview(self) -> None:
+    def _connect_auto_preview(self) -> None:
+        self.template_w.valueChanged.connect(self._schedule_preview)
+        self.template_h.valueChanged.connect(self._schedule_preview)
+        self.seed.valueChanged.connect(self._schedule_preview)
+        self.ticket_count.valueChanged.connect(self._schedule_preview)
+        self.header_height_mm.valueChanged.connect(self._schedule_preview)
+        self.header_spacing_mm.valueChanged.connect(self._schedule_preview)
+        self.row_group_gap_mm.valueChanged.connect(self._schedule_preview)
+        self.page_size.currentTextChanged.connect(self._schedule_preview)
+        self.tickets_per_page.valueChanged.connect(self._schedule_preview)
+        self.margin_mm.valueChanged.connect(self._schedule_preview)
+        self.spacing_mm.valueChanged.connect(self._schedule_preview)
+        self.mode_page.toggled.connect(self._schedule_preview)
+        self.mode_ticket.toggled.connect(self._schedule_preview)
+        self.round_name.textChanged.connect(self._schedule_preview)
+        self.org_text.textChanged.connect(self._schedule_preview)
+        self.seed_pad_length.valueChanged.connect(self._schedule_preview)
+
+    def _schedule_preview(self) -> None:
+        self._preview_timer.start()
+
+    def _on_zoom_changed(self) -> None:
+        self.zoom_value.setText(f"{self.zoom_slider.value()}%")
+        self._schedule_preview()
+
+    def _resolve_base_seed(self) -> int:
         seed_value = int(self.seed.value())
-        base_seed = seed_value if seed_value != 0 else random.randint(1, 2_000_000_000)
+        if seed_value != 0:
+            self._last_seed = seed_value
+            return seed_value
+        if self._last_seed is None:
+            self._last_seed = random.randint(1, 2_000_000_000)
+        return self._last_seed
+
+    def _update_preview(self) -> None:
+        base_seed = self._resolve_base_seed()
 
         template = self._current_template()
         header = self._current_header()
         grid = self._current_grid()
         print_spec = self._current_print()
+        zoom = self.zoom_slider.value() / 100.0
 
         if str(print_spec.mode).upper() == "PAGE":
             per_page = int(print_spec.tickets_per_page)
@@ -540,11 +606,18 @@ class MainWindow(QMainWindow):
                 header=header,
                 tickets=tickets,
                 seeds=seeds,
-                scale=3.0,
+                scale=3.0 * zoom,
             )
         else:
             numbers = generate_loto_15x6(seed=base_seed)
-            img = render_ticket_preview(template, grid, header=header, numbers=numbers, seed=base_seed, scale=4.0)
+            img = render_ticket_preview(
+                template,
+                grid,
+                header=header,
+                numbers=numbers,
+                seed=base_seed,
+                scale=4.0 * zoom,
+            )
 
         pix = pil_to_qpixmap(img)
 
@@ -553,6 +626,7 @@ class MainWindow(QMainWindow):
         self.preview_label.setPixmap(pix)
 
     def _on_export_pdf(self) -> None:
+        self._update_preview()
         out_path, _ = QFileDialog.getSaveFileName(
             self,
             "Xuất PDF",
@@ -562,8 +636,7 @@ class MainWindow(QMainWindow):
         if not out_path:
             return
 
-        seed_value = int(self.seed.value())
-        base_seed = seed_value if seed_value != 0 else random.randint(1, 2_000_000_000)
+        base_seed = self._resolve_base_seed()
         count = int(self.ticket_count.value())
 
         tickets: list[list[list[int | None]]] = []

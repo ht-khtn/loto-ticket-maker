@@ -6,9 +6,10 @@
     "background_path": null
   },
   "header": {
-    "org_text": "CÔNG TY ABC\nChi nhánh 1",
+    "org_text": "ĐOÀN TRƯỜNG THPT NGUYỄN VIỆT HỒNG\nVÉ LÔ TÔ",
     "org_image_path": null,
-    "round_name": "VÒNG 12"
+    "round_name": "Vòng loại",
+    "seed_pad_length": 0
   },
   "grid": {
     "rows": 15,
@@ -16,12 +17,12 @@
     "padding_mm": 4.0,
     "line_width_mm": 0.4,
     "header_height_mm": 18.0,
+    "header_spacing_mm": 2.0,
     "row_group_size": 3,
-    "row_group_gap_mm": 2.0,
-    "number_font_scale": 0.65
+    "row_group_gap_mm": 2.0
   },
   "print_spec": {
-    "mode": "PAGE",
+    "mode": "TICKET",
     "page_size": "A4",
     "margin_mm": 5.0,
     "spacing_mm": 2.0,
