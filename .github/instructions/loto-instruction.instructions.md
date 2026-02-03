@@ -32,3 +32,7 @@ applyTo: "**"
 7. Kiểm tra lại:
 
 - Sau khi thực hiện, luôn kiểm tra và fix problems trong workspace cho tất cả các file, cho dù file đó có sửa hay không
+
+8. Giao diện:
+
+- Khi tạo giao diện, đảm bảo sự thống nhất trong các thành phần

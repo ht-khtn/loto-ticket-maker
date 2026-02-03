@@ -10,11 +10,12 @@ Hiện tại chỉ là khung để bắt đầu nhanh.
 from __future__ import annotations
 
 from pathlib import Path
+import os
 from typing import Mapping, cast
 import random
 
 from PySide6.QtCore import Qt, QEvent, QTimer, QObject, QPoint
-from PySide6.QtGui import QPixmap, QMouseEvent
+from PySide6.QtGui import QPixmap, QMouseEvent, QFontDatabase
 from PySide6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -43,6 +44,7 @@ from PySide6.QtWidgets import (
 from ..config.defaults import DEFAULT_GRID, DEFAULT_HEADER, DEFAULT_PRINT, DEFAULT_TEMPLATE
 from ..config.presets import load_preset, save_preset
 from ..core.layout import compute_page_layout
+from ..core.exceptions import ExportCanceled
 from ..core.loto_15x6 import generate_loto_15x6
 from ..core.models import GridSpec, PrintSpec, TicketHeaderSpec, TicketTemplateSpec
 from ..export.pdf_exporter import export_tickets_pdf
@@ -326,6 +328,15 @@ class MainWindow(QMainWindow):
         lay.addWidget(btn_org_img, 4, 0)
         lay.addWidget(btn_org_img_clear, 4, 1)
 
+        lay.addWidget(QLabel("Font chữ"), 5, 0)
+        self.font_family = QComboBox()
+        self.font_family.addItem("(mặc định)", "")
+        families = sorted(QFontDatabase.families())
+        for name in families:
+            self.font_family.addItem(name, name)
+        self._set_font_family(str(DEFAULT_HEADER.font_family))
+        lay.addWidget(self.font_family, 5, 1)
+
         return box
 
     def _build_grid_group(self, parent: QWidget) -> QGroupBox:
@@ -491,6 +502,14 @@ class MainWindow(QMainWindow):
                 return
         self.export_quality.setCurrentIndex(1)
 
+    def _set_font_family(self, family: str) -> None:
+        value = str(family)
+        for i in range(self.font_family.count()):
+            if str(self.font_family.itemData(i)) == value:
+                self.font_family.setCurrentIndex(i)
+                return
+        self.font_family.setCurrentIndex(0)
+
     def _refresh_print_ui(self) -> None:
         is_page = self.mode_page.isChecked()
         self.page_size.setEnabled(is_page)
@@ -518,6 +537,7 @@ class MainWindow(QMainWindow):
             org_image_path=self._org_image_path,
             round_name=str(self.round_name.text()),
             seed_pad_length=int(self.seed_pad_length.value()),
+            font_family=str(self.font_family.currentData() or ""),
         )
 
     def _current_grid(self) -> GridSpec:
@@ -630,6 +650,7 @@ class MainWindow(QMainWindow):
         self.org_image_label.setText(header.org_image_path or "(chưa chọn)")
         self.round_name.setText(header.round_name)
         self.seed_pad_length.setValue(header.seed_pad_length)
+        self._set_font_family(header.font_family)
 
         # Grid cố định 15x6 theo RULE.md
         self.rows.setValue(grid.rows)
@@ -694,6 +715,7 @@ class MainWindow(QMainWindow):
         self.round_name.textChanged.connect(self._schedule_preview)
         self.org_text.textChanged.connect(self._schedule_preview)
         self.seed_pad_length.valueChanged.connect(self._schedule_preview)
+        self.font_family.currentTextChanged.connect(self._schedule_preview)
         self.preview_page.valueChanged.connect(self._schedule_preview)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
@@ -858,7 +880,7 @@ class MainWindow(QMainWindow):
 
         progress = QProgressDialog(
             f"Đang xuất trang 0/{total_pages}",
-            "",
+            "Hủy",
             0,
             total_pages,
             self,
@@ -868,13 +890,21 @@ class MainWindow(QMainWindow):
         progress.setAutoReset(False)
         progress.setMinimumDuration(0)
         progress.setValue(0)
-        progress.setCancelButton(None)
+        canceled = {"value": False}
+
+        def _on_cancel() -> None:
+            canceled["value"] = True
+
+        progress.canceled.connect(_on_cancel)
 
         def _on_progress(current: int, total: int) -> None:
             progress.setLabelText(f"Đang xuất trang {current}/{total}")
             progress.setMaximum(total)
             progress.setValue(current)
             QApplication.processEvents()
+
+        def _is_canceled() -> bool:
+            return bool(canceled["value"])
 
         try:
             export_tickets_pdf(
@@ -887,7 +917,17 @@ class MainWindow(QMainWindow):
                 seeds=seeds,
                 total_tickets=count,
                 progress_cb=_on_progress,
+                cancel_cb=_is_canceled,
             )
+        except ExportCanceled:
+            progress.close()
+            try:
+                if os.path.exists(out_path):
+                    os.remove(out_path)
+            except Exception:
+                pass
+            QMessageBox.information(self, "Đã hủy", "Đã hủy xuất PDF theo yêu cầu.")
+            return
         except Exception as e:
             progress.close()
             QMessageBox.critical(self, "Lỗi xuất PDF", str(e))

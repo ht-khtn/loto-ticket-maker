@@ -13,6 +13,7 @@ DEFAULT_HEADER = TicketHeaderSpec(
     org_image_path=None,
     round_name="",
     seed_pad_length=0,
+    font_family="",
 )
 
 DEFAULT_GRID = GridSpec(

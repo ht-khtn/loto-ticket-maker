@@ -23,6 +23,7 @@ class TicketHeaderSpec:
     org_image_path: str | None = None
     round_name: str = ""
     seed_pad_length: int = 0
+    font_family: str = ""
 
 
 @dataclass(frozen=True)

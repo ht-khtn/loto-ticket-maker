@@ -9,3 +9,7 @@ class LotoError(Exception):
 
 class LayoutError(LotoError):
     pass
+
+
+class ExportCanceled(LotoError):
+    pass

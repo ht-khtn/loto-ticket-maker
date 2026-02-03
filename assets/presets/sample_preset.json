@@ -9,7 +9,8 @@
     "org_text": "ĐOÀN TRƯỜNG THPT NGUYỄN VIỆT HỒNG\nVÉ LÔ TÔ",
     "org_image_path": null,
     "round_name": "Vòng loại",
-    "seed_pad_length": 4
+    "seed_pad_length": 4,
+    "font_family": ""
   },
   "grid": {
     "rows": 15,

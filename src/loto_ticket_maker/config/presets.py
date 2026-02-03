@@ -27,6 +27,7 @@ class TicketHeaderSpecDict(TypedDict):
     org_image_path: str | None
     round_name: str
     seed_pad_length: int
+    font_family: str
 
 
 class GridSpecDict(TypedDict):
@@ -89,6 +90,7 @@ def save_preset(
             "org_image_path": header.org_image_path,
             "round_name": str(header.round_name),
             "seed_pad_length": int(header.seed_pad_length),
+            "font_family": str(header.font_family),
         },
         "grid": {
             "rows": int(grid.rows),
@@ -160,12 +162,14 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
     org_image_path = h_obj.get("org_image_path")
     round_name = h_obj.get("round_name")
     seed_pad_length = h_obj.get("seed_pad_length")
+    font_family = h_obj.get("font_family")
 
     header = TicketHeaderSpec(
         org_text=str(org_text) if isinstance(org_text, str) else "",
         org_image_path=str(org_image_path) if isinstance(org_image_path, str) and org_image_path.strip() else None,
         round_name=str(round_name) if isinstance(round_name, str) else "",
         seed_pad_length=int(seed_pad_length) if isinstance(seed_pad_length, int) else 0,
+        font_family=str(font_family) if isinstance(font_family, str) else "",
     )
 
     rows = g_obj.get("rows")

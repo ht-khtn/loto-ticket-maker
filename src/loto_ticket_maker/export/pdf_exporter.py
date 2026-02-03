@@ -19,7 +19,7 @@ from reportlab.pdfgen import canvas
 
 from ..core.layout import compute_page_layout
 from ..core.models import GridSpec, PrintSpec, TicketHeaderSpec, TicketTemplateSpec
-from ..core.exceptions import LayoutError
+from ..core.exceptions import ExportCanceled, LayoutError
 from ..render.ticket_renderer import render_ticket_preview
 
 
@@ -95,6 +95,7 @@ def export_tickets_pdf(
     seeds: Iterable[Optional[int]] | None = None,
     total_tickets: int | None = None,
     progress_cb: Callable[[int, int], None] | None = None,
+    cancel_cb: Callable[[], bool] | None = None,
 ) -> PdfExportResult:
     """Xuất PDF theo mode trong PrintSpec.
 
@@ -114,6 +115,8 @@ def export_tickets_pdf(
         c = canvas.Canvas(out_path, pagesize=(page_w, page_h))
         total_pages = max(1, int(total_tickets or 1))
         for idx, numbers in enumerate(tickets):
+            if cancel_cb is not None and cancel_cb():
+                raise ExportCanceled("Đã hủy xuất PDF")
             seed = next(seeds_it) if seeds_it is not None else None
             _draw_ticket_image(
                 c,
@@ -178,6 +181,8 @@ def export_tickets_pdf(
     )
     last_page_index = -1
     for idx, numbers in enumerate(tickets):
+        if cancel_cb is not None and cancel_cb():
+            raise ExportCanceled("Đã hủy xuất PDF")
         slot = idx % per_page
         if slot == 0 and idx != 0:
             c.showPage()
