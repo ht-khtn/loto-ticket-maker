@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPlainTextEdit,
+    QProgressDialog,
     QPushButton,
     QRadioButton,
     QSlider,
@@ -36,6 +37,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QVBoxLayout,
     QWidget,
+    QApplication,
 )
 
 from ..config.defaults import DEFAULT_GRID, DEFAULT_HEADER, DEFAULT_PRINT, DEFAULT_TEMPLATE
@@ -430,7 +432,7 @@ class MainWindow(QMainWindow):
 
         lay.addWidget(QLabel("Số vé xuất"), 6, 0)
         self.ticket_count = QSpinBox()
-        self.ticket_count.setRange(1, 200)
+        self.ticket_count.setRange(1, 10000)
         self.ticket_count.setValue(6)
         lay.addWidget(self.ticket_count, 6, 1)
 
@@ -810,17 +812,50 @@ class MainWindow(QMainWindow):
         base_seed = self._resolve_base_seed()
         count = int(self.ticket_count.value())
 
-        tickets: list[list[list[int | None]]] = []
-        seeds: list[int | None] = []
-        for i in range(count):
-            s = base_seed + i
-            seeds.append(s)
-            tickets.append(generate_loto_15x6(seed=s))
+        tickets = (generate_loto_15x6(seed=base_seed + i) for i in range(count))
+        seeds = (base_seed + i for i in range(count))
 
         template = self._current_template()
         header = self._current_header()
         grid = self._current_grid()
         print_spec = self._current_print()
+
+        total_pages = 1
+        if str(print_spec.mode).upper() == "TICKET":
+            total_pages = max(1, count)
+        else:
+            page_w_mm, page_h_mm = _page_mm_size(print_spec.page_size, print_spec.orientation)
+            layout = compute_page_layout(
+                page_w_mm=page_w_mm,
+                page_h_mm=page_h_mm,
+                ticket_w_mm=template.width_mm,
+                ticket_h_mm=template.height_mm,
+                margin_mm=print_spec.margin_mm,
+                spacing_mm=print_spec.spacing_mm,
+                tickets_per_page=print_spec.tickets_per_page,
+            )
+            per_page = max(1, int(layout.rows) * int(layout.cols))
+            total_pages = max(1, (count + per_page - 1) // per_page)
+
+        progress = QProgressDialog(
+            f"Đang xuất trang 0/{total_pages}",
+            "",
+            0,
+            total_pages,
+            self,
+        )
+        progress.setWindowTitle("Đang xuất PDF")
+        progress.setAutoClose(False)
+        progress.setAutoReset(False)
+        progress.setMinimumDuration(0)
+        progress.setValue(0)
+        progress.setCancelButton(None)
+
+        def _on_progress(current: int, total: int) -> None:
+            progress.setLabelText(f"Đang xuất trang {current}/{total}")
+            progress.setMaximum(total)
+            progress.setValue(current)
+            QApplication.processEvents()
 
         try:
             export_tickets_pdf(
@@ -831,9 +866,14 @@ class MainWindow(QMainWindow):
                 print_spec=print_spec,
                 tickets=tickets,
                 seeds=seeds,
+                total_tickets=count,
+                progress_cb=_on_progress,
             )
         except Exception as e:
+            progress.close()
             QMessageBox.critical(self, "Lỗi xuất PDF", str(e))
             return
+
+        progress.close()
 
         QMessageBox.information(self, "Thành công", f"Đã xuất PDF: {out_path}")

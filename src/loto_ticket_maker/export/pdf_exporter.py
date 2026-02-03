@@ -11,7 +11,7 @@ Sau đó:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Iterable, Iterator, Optional
 
 from reportlab.lib.pagesizes import A4, A5
 from reportlab.lib.utils import ImageReader
@@ -82,8 +82,10 @@ def export_tickets_pdf(
     header: TicketHeaderSpec | None,
     grid: GridSpec,
     print_spec: PrintSpec,
-    tickets: list[list[list[Optional[int]]]],
-    seeds: list[Optional[int]] | None = None,
+    tickets: Iterable[list[list[Optional[int]]]],
+    seeds: Iterable[Optional[int]] | None = None,
+    total_tickets: int | None = None,
+    progress_cb: Callable[[int, int], None] | None = None,
 ) -> PdfExportResult:
     """Xuất PDF theo mode trong PrintSpec.
 
@@ -93,12 +95,15 @@ def export_tickets_pdf(
 
     mode = str(print_spec.mode).upper().strip()
 
+    seeds_it: Iterator[Optional[int]] | None = iter(seeds) if seeds is not None else None
+
     if mode == "TICKET":
         page_w = mm_to_pt(template.width_mm)
         page_h = mm_to_pt(template.height_mm)
         c = canvas.Canvas(out_path, pagesize=(page_w, page_h))
+        total_pages = max(1, int(total_tickets or 1))
         for idx, numbers in enumerate(tickets):
-            seed = seeds[idx] if seeds and idx < len(seeds) else None
+            seed = next(seeds_it) if seeds_it is not None else None
             _draw_ticket_image(
                 c,
                 origin_x=0,
@@ -113,6 +118,8 @@ def export_tickets_pdf(
                 render_scale=_PRINT_RENDER_SCALE,
             )
             c.showPage()
+            if progress_cb is not None:
+                progress_cb(idx + 1, total_pages)
         c.save()
         return PdfExportResult(path=out_path)
 
@@ -153,16 +160,24 @@ def export_tickets_pdf(
         )
 
     per_page = layout.rows * layout.cols
+    total_pages = (
+        max(1, (int(total_tickets) + per_page - 1) // per_page)
+        if total_tickets is not None
+        else 1
+    )
+    last_page_index = -1
     for idx, numbers in enumerate(tickets):
         slot = idx % per_page
         if slot == 0 and idx != 0:
             c.showPage()
+            if progress_cb is not None:
+                progress_cb((idx // per_page), total_pages)
 
         r = slot // layout.cols
         col = slot % layout.cols
         origin_x = margin + col * (ticket_w + spacing)
         origin_y = page_h - margin - ticket_h - r * (ticket_h + spacing)
-        seed = seeds[idx] if seeds and idx < len(seeds) else None
+        seed = next(seeds_it) if seeds_it is not None else None
         _draw_ticket_image(
             c,
             origin_x=origin_x,
@@ -176,8 +191,13 @@ def export_tickets_pdf(
             seed=seed,
             render_scale=_PRINT_RENDER_SCALE * layout.scale,
         )
+        last_page_index = max(last_page_index, idx // per_page)
 
+    if total_tickets is None:
+        total_pages = max(1, last_page_index + 1)
     c.showPage()
+    if progress_cb is not None:
+        progress_cb(total_pages, total_pages)
     c.save()
     return PdfExportResult(path=out_path)
 
@@ -212,4 +232,5 @@ def export_tickets_a4_pdf(
         print_spec=print_spec2,
         tickets=tickets,
         seeds=None,
+        total_tickets=len(tickets),
     )

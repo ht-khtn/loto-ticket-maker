@@ -119,6 +119,20 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
   background: none;
 }
 
+QProgressBar {
+  border: 1px solid #1F2937;
+  border-radius: 8px;
+  text-align: center;
+  color: #E5E7EB;
+  background: #111827;
+  padding: 2px;
+}
+
+QProgressBar::chunk {
+  background: #2563EB;
+  border-radius: 6px;
+}
+
 /* Dialogs / popups readability */
 QDialog, QMessageBox, QFileDialog {
   background: #0F172A;
