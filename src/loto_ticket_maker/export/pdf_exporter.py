@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from reportlab.lib.pagesizes import A4, A5
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 from ..core.models import GridSpec, PrintSpec, TicketTemplateSpec
@@ -42,6 +43,21 @@ def _draw_ticket(
     ticket_w = mm_to_pt(template.width_mm)
     ticket_h = mm_to_pt(template.height_mm)
 
+    if template.background_path:
+        try:
+            c.drawImage(  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+                ImageReader(template.background_path),
+                origin_x,
+                origin_y,
+                width=ticket_w,
+                height=ticket_h,
+                preserveAspectRatio=False,
+                mask="auto",
+            )
+        except Exception:
+            pass
+
+    c.setLineWidth(max(0.25, mm_to_pt(grid.line_width_mm)))
     c.rect(origin_x, origin_y, ticket_w, ticket_h)
 
     rects = generate_grid_rects_mm(template, grid)
@@ -51,6 +67,19 @@ def _draw_ticket(
         w = mm_to_pt(rect.w)
         h = mm_to_pt(rect.h)
         c.rect(x, y, w, h)
+
+    # RULE.md: 15 hàng chia nhóm 3 hàng -> kẻ đường ngăn nhóm
+    if grid.rows == 15 and grid.cols == 6:
+        content_x1 = origin_x + mm_to_pt(grid.padding_mm)
+        content_x2 = origin_x + ticket_w - mm_to_pt(grid.padding_mm)
+        cell_h_mm = (template.height_mm - 2 * grid.padding_mm) / grid.rows
+        sep_w = max(0.5, mm_to_pt(grid.line_width_mm) * 2)
+        c.setLineWidth(sep_w)
+        for boundary in (3, 6, 9, 12):
+            y_mm_from_top = grid.padding_mm + boundary * cell_h_mm
+            y = origin_y + ticket_h - mm_to_pt(y_mm_from_top)
+            c.line(content_x1, y, content_x2, y)
+        c.setLineWidth(max(0.25, mm_to_pt(grid.line_width_mm)))
 
     if numbers is None:
         return
@@ -88,7 +117,6 @@ def export_single_ticket_pdf(
     c = canvas.Canvas(out_path, pagesize=(page_w, page_h))
 
     margin = mm_to_pt(print_spec.margin_mm)
-    ticket_w = mm_to_pt(template.width_mm)
     ticket_h = mm_to_pt(template.height_mm)
 
     origin_x = margin
@@ -110,11 +138,14 @@ def export_tickets_a4_pdf(
     per_row: int,
     per_col: int,
 ) -> PdfExportResult:
-    """Xuất nhiều vé lên giấy A4 theo lưới per_row x per_col.
+    """Xuất nhiều vé lên giấy A4/A5 theo lưới per_row x per_col.
 
     Vé được giữ đúng kích thước vật lý (mm). Nếu không đủ chỗ sẽ báo lỗi.
     """
-    page_w, page_h = A4
+    if print_spec.page_size.upper() == "A5":
+        page_w, page_h = A5
+    else:
+        page_w, page_h = A4
     c = canvas.Canvas(out_path, pagesize=(page_w, page_h))
 
     margin = mm_to_pt(print_spec.margin_mm)

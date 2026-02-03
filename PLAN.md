@@ -77,7 +77,7 @@ Ngày: 2026-02-03
 
 ### M3 — Số & rule
 
-- Thêm rule sinh số (bạn chốt: 3x9 loto VN hay 5x5 bingo)
+- Thêm rule sinh số (bạn chốt: theo RULE.md — 15x6, đủ 1..60)
 - Seed để tái tạo vé
 
 ### M4 — Xuất PDF in nhiều vé/trang
@@ -101,7 +101,7 @@ Ngày: 2026-02-03
 
 Đã chốt:
 
-- Dạng vé: **loto VN 3x9**
+- Dạng vé: **15x6 theo RULE.md**
 - Khổ giấy in: **A4**
 
 Còn cần bạn xác nhận thêm:

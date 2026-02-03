@@ -11,6 +11,8 @@ Sau đó:
 
 from __future__ import annotations
 
+from typing import cast
+
 from PIL import Image, ImageDraw, ImageFont
 
 from ..core.grid_generator import generate_grid_rects_mm
@@ -21,10 +23,10 @@ def _get_font(size_px: int) -> ImageFont.ImageFont:
     # Ưu tiên font phổ biến trên Windows; fallback về default.
     for name in ("arialbd.ttf", "arial.ttf"):
         try:
-            return ImageFont.truetype(name, size_px)
+            return cast(ImageFont.ImageFont, ImageFont.truetype(name, size_px))
         except OSError:
             pass
-    return ImageFont.load_default()
+    return cast(ImageFont.ImageFont, ImageFont.load_default())
 
 
 def render_ticket_preview(
@@ -41,15 +43,39 @@ def render_ticket_preview(
     height_px = max(1, int(template.height_mm * scale))
 
     img = Image.new("RGB", (width_px, height_px), (255, 255, 255))
+    if template.background_path:
+        try:
+            bg = Image.open(template.background_path).convert("RGB")
+            bg = bg.resize((width_px, height_px), Image.Resampling.LANCZOS)
+            img.paste(bg, (0, 0))
+        except Exception:
+            pass
     draw = ImageDraw.Draw(img)
 
     rects = generate_grid_rects_mm(template, grid)
+    stroke_w = max(1, int(grid.line_width_mm * scale))
     for rect in rects:
         x1 = rect.x * scale
         y1 = rect.y * scale
         x2 = (rect.x + rect.w) * scale
         y2 = (rect.y + rect.h) * scale
-        draw.rectangle([x1, y1, x2, y2], outline=(30, 41, 59), width=1)
+        draw.rectangle([x1, y1, x2, y2], outline=(30, 41, 59), width=stroke_w)
+
+    # RULE.md: 15 hàng chia nhóm 3 hàng -> kẻ đường ngăn nhóm
+    if grid.rows == 15 and grid.cols == 6:
+        content_x = grid.padding_mm * scale
+        content_y = grid.padding_mm * scale
+        content_w = (template.width_mm - 2 * grid.padding_mm) * scale
+        content_h = (template.height_mm - 2 * grid.padding_mm) * scale
+        cell_h = content_h / grid.rows
+        sep_w = max(stroke_w + 1, int(stroke_w * 2))
+        for boundary in (3, 6, 9, 12):
+            y = content_y + boundary * cell_h
+            draw.line(
+                [(content_x, y), (content_x + content_w, y)],
+                fill=(71, 85, 105),
+                width=sep_w,
+            )
 
     if numbers is not None:
         # Vẽ số vào giữa ô

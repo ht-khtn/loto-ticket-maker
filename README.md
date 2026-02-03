@@ -70,7 +70,7 @@ Gợi ý: khi app có asset (ảnh nền, font), cần cấu hình `--add-data`.
 
 ## Góp ý / mở rộng
 
-Đã chốt: **loto VN 3x9** và **in A4**.
+Đã chốt: **vé 15x6 theo RULE.md (đủ 1..60)** và **in A4**.
 
 Bạn xác nhận thêm giúp mình:
 
