@@ -9,7 +9,7 @@
     "org_text": "ĐOÀN TRƯỜNG THPT NGUYỄN VIỆT HỒNG\nVÉ LÔ TÔ",
     "org_image_path": null,
     "round_name": "Vòng loại",
-    "seed_pad_length": 0
+    "seed_pad_length": 4
   },
   "grid": {
     "rows": 15,
@@ -29,7 +29,7 @@
     "tickets_per_page": 6
   },
   "ui": {
-    "seed": 0,
+    "seed": 1,
     "ticket_count": 6
   }
 }

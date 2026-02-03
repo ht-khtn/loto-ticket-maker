@@ -156,18 +156,15 @@ class MainWindow(QMainWindow):
         zoom_layout.addWidget(self.zoom_value)
 
         self.preview_label = QLabel("Bấm 'Tạo vé (preview)' để xem vé 15x6")
-        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.preview_label.setMinimumHeight(500)
         self.preview_label.setStyleSheet("background: #111827; border-radius: 10px;")
 
         scroll = QScrollArea(preview_container)
-        scroll.setWidgetResizable(True)
-        inner = QWidget()
-        inner_layout = QVBoxLayout(inner)
-        inner_layout.addWidget(self.preview_label)
-        inner_layout.addStretch(1)
-        scroll.setWidget(inner)
-        self.preview_label.installEventFilter(self)
+        scroll.setWidgetResizable(False)
+        scroll.setWidget(self.preview_label)
+        scroll.viewport().installEventFilter(self)
+        scroll.viewport().setMouseTracking(True)
         self.preview_label.setCursor(Qt.CursorShape.OpenHandCursor)
         self.preview_scroll = scroll
 
@@ -289,26 +286,18 @@ class MainWindow(QMainWindow):
         self.seed.setToolTip("0 = random; số khác 0 để tái tạo vé")
         lay.addWidget(self.seed, 2, 1)
 
-        lay.addWidget(QLabel("Gap nhóm 3 hàng (mm)"), 3, 0)
-        self.row_group_gap_mm = QDoubleSpinBox()
-        self.row_group_gap_mm.setRange(0.0, 20.0)
-        self.row_group_gap_mm.setDecimals(1)
-        self.row_group_gap_mm.setSingleStep(0.5)
-        self.row_group_gap_mm.setValue(DEFAULT_GRID.row_group_gap_mm)
-        lay.addWidget(self.row_group_gap_mm, 3, 1)
-
-        lay.addWidget(QLabel("Seed pad (số ký tự)"), 4, 0)
+        lay.addWidget(QLabel("Seed pad (số ký tự)"), 3, 0)
         self.seed_pad_length = QSpinBox()
         self.seed_pad_length.setRange(0, 12)
         self.seed_pad_length.setValue(DEFAULT_HEADER.seed_pad_length)
-        lay.addWidget(self.seed_pad_length, 4, 1)
+        lay.addWidget(self.seed_pad_length, 3, 1)
 
         hint = QLabel(
             "Luật đang dùng: 15x6 (đủ 1..60, mỗi hàng 2 ô trống, trống theo cột 6-5-5-5-5-4)"
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #6B7280;")
-        lay.addWidget(hint, 5, 0, 1, 2)
+        lay.addWidget(hint, 4, 0, 1, 2)
         return box
 
     def _build_print_group(self, parent: QWidget) -> QGroupBox:
@@ -356,38 +345,46 @@ class MainWindow(QMainWindow):
         self.header_spacing_mm.setValue(DEFAULT_GRID.header_spacing_mm)
         lay.addWidget(self.header_spacing_mm, 3, 1)
 
-        lay.addWidget(QLabel("Số vé xuất"), 4, 0)
+        lay.addWidget(QLabel("Khoảng cách nhóm 3 hàng (mm)"), 4, 0)
+        self.row_group_gap_mm = QDoubleSpinBox()
+        self.row_group_gap_mm.setRange(0.0, 20.0)
+        self.row_group_gap_mm.setDecimals(1)
+        self.row_group_gap_mm.setSingleStep(0.5)
+        self.row_group_gap_mm.setValue(DEFAULT_GRID.row_group_gap_mm)
+        lay.addWidget(self.row_group_gap_mm, 4, 1)
+
+        lay.addWidget(QLabel("Số vé xuất"), 5, 0)
         self.ticket_count = QSpinBox()
         self.ticket_count.setRange(1, 200)
         self.ticket_count.setValue(6)
-        lay.addWidget(self.ticket_count, 4, 1)
+        lay.addWidget(self.ticket_count, 5, 1)
 
-        lay.addWidget(QLabel("Vé / trang"), 5, 0)
+        lay.addWidget(QLabel("Vé / trang"), 6, 0)
         self.tickets_per_page = QSpinBox()
         self.tickets_per_page.setRange(1, 40)
         self.tickets_per_page.setValue(DEFAULT_PRINT.tickets_per_page)
-        lay.addWidget(self.tickets_per_page, 5, 1)
+        lay.addWidget(self.tickets_per_page, 6, 1)
 
-        lay.addWidget(QLabel("Lề (mm)"), 6, 0)
+        lay.addWidget(QLabel("Lề (mm)"), 7, 0)
         self.margin_mm = QDoubleSpinBox()
         self.margin_mm.setRange(0.0, 50.0)
         self.margin_mm.setDecimals(1)
         self.margin_mm.setSingleStep(1.0)
         self.margin_mm.setValue(DEFAULT_PRINT.margin_mm)
-        lay.addWidget(self.margin_mm, 6, 1)
+        lay.addWidget(self.margin_mm, 7, 1)
 
-        lay.addWidget(QLabel("Khoảng cách (mm)"), 7, 0)
+        lay.addWidget(QLabel("Khoảng cách vé (mm)"), 8, 0)
         self.spacing_mm = QDoubleSpinBox()
         self.spacing_mm.setRange(0.0, 50.0)
         self.spacing_mm.setDecimals(1)
         self.spacing_mm.setSingleStep(1.0)
         self.spacing_mm.setValue(DEFAULT_PRINT.spacing_mm)
-        lay.addWidget(self.spacing_mm, 7, 1)
+        lay.addWidget(self.spacing_mm, 8, 1)
 
         note = QLabel("PAGE mode: auto-fit theo vé/trang. TICKET mode: mỗi vé 1 trang đúng kích thước vé.")
         note.setWordWrap(True)
         note.setStyleSheet("color: #6B7280;")
-        lay.addWidget(note, 8, 0, 1, 2)
+        lay.addWidget(note, 9, 0, 1, 2)
         self._refresh_print_ui()
         return box
 
@@ -574,11 +571,11 @@ class MainWindow(QMainWindow):
         self.ticket_count.valueChanged.connect(self._schedule_preview)
         self.header_height_mm.valueChanged.connect(self._schedule_preview)
         self.header_spacing_mm.valueChanged.connect(self._schedule_preview)
-        self.row_group_gap_mm.valueChanged.connect(self._schedule_preview)
         self.page_size.currentTextChanged.connect(self._schedule_preview)
         self.tickets_per_page.valueChanged.connect(self._schedule_preview)
         self.margin_mm.valueChanged.connect(self._schedule_preview)
         self.spacing_mm.valueChanged.connect(self._schedule_preview)
+        self.row_group_gap_mm.valueChanged.connect(self._schedule_preview)
         self.mode_page.toggled.connect(self._schedule_preview)
         self.mode_ticket.toggled.connect(self._schedule_preview)
         self.round_name.textChanged.connect(self._schedule_preview)
@@ -586,7 +583,11 @@ class MainWindow(QMainWindow):
         self.seed_pad_length.valueChanged.connect(self._schedule_preview)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if watched is self.preview_label and self.preview_scroll is not None and isinstance(event, QMouseEvent):
+        if (
+            self.preview_scroll is not None
+            and watched is self.preview_scroll.viewport()
+            and isinstance(event, QMouseEvent)
+        ):
             if event.type() == QEvent.Type.MouseButtonPress:
                 if event.button() == Qt.MouseButton.LeftButton:
                     self._dragging_preview = True
@@ -636,6 +637,7 @@ class MainWindow(QMainWindow):
         grid = self._current_grid()
         print_spec = self._current_print()
         zoom = self.zoom_slider.value() / 100.0
+        render_zoom = max(1.0, zoom)
 
         if str(print_spec.mode).upper() == "PAGE":
             per_page = int(print_spec.tickets_per_page)
@@ -653,7 +655,7 @@ class MainWindow(QMainWindow):
                 header=header,
                 tickets=tickets,
                 seeds=seeds,
-                scale=3.0 * zoom,
+                scale=3.0 * render_zoom,
             )
         else:
             numbers = generate_loto_15x6(seed=base_seed)
@@ -663,14 +665,25 @@ class MainWindow(QMainWindow):
                 header=header,
                 numbers=numbers,
                 seed=base_seed,
-                scale=4.0 * zoom,
+                scale=4.0 * render_zoom,
             )
 
         pix = pil_to_qpixmap(img)
 
         self._last_preview = pix
         self._last_seed = base_seed
+        if zoom < 1.0:
+            target_w = max(1, int(pix.width() * zoom))
+            target_h = max(1, int(pix.height() * zoom))
+            pix = pix.scaled(
+                target_w,
+                target_h,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+
         self.preview_label.setPixmap(pix)
+        self.preview_label.resize(pix.size())
 
     def _on_export_pdf(self) -> None:
         self._update_preview()

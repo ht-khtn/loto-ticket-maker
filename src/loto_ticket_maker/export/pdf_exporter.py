@@ -87,6 +87,24 @@ def _fit_font_size(
     return min_size
 
 
+def _fit_font_size_for_width(
+    c: canvas.Canvas,
+    text: str,
+    font_name: str,
+    max_w: float,
+    max_size: int,
+    min_size: int = 8,
+) -> int:
+    size = max(min_size, max_size)
+    while size >= min_size:
+        if c.stringWidth(text, font_name, size) <= max_w + 1e-6:
+            return size
+        size -= 1
+    return min_size
+
+
+
+
 def _draw_header(
     c: canvas.Canvas,
     template: TicketTemplateSpec,
@@ -215,28 +233,34 @@ def _draw_header(
         except Exception:
             pass
     else:
-        lines = header.org_text.splitlines()
+        lines = header.org_text.splitlines() or [""]
         lines = lines[:6]
-        if lines:
-            per_line_h = inner_h / max(1, len(lines))
-            total_h = per_line_h * len(lines)
-            y = y1 + (inner_h - total_h) / 2
-            for line in lines:
-                raw_line = line if line != "" else " "
-                size = _fit_font_size(
-                    c,
-                    raw_line,
-                    font_name=regular_font,
-                    max_w=right_w - 2 * gap,
-                    max_h=per_line_h * 0.95,
-                    min_size=8,
-                    max_size=int(per_line_h * 0.95),
-                )
-                c.setFont(regular_font, size)
-                tw = c.stringWidth(raw_line, regular_font, size)
-                tx = right_x + (right_w - tw) / 2
-                c.drawString(tx, y + (per_line_h - size) * 0.2, raw_line)
-                y += per_line_h
+        max_w = right_w - 2 * gap
+
+        sizes: list[int] = []
+        max_size = int(inner_h * 0.6)
+        for line in lines:
+            raw_line = line if line != "" else " "
+            size = _fit_font_size_for_width(c, raw_line, regular_font, max_w, max_size)
+            sizes.append(size)
+
+        total_text_h = sum(sizes)
+        if len(sizes) > 1:
+            remaining = max(0.0, inner_h - total_text_h)
+            min_size = min(sizes)
+            gap_h = min(remaining / (len(sizes) - 1), min_size * 0.25)
+        else:
+            gap_h = 0.0
+        total_h = total_text_h + gap_h * max(0, len(sizes) - 1)
+        y = y1 + (inner_h - total_h) / 2
+
+        for line, size in zip(lines, sizes, strict=False):
+            raw_line = line if line != "" else " "
+            c.setFont(regular_font, size)
+            tw = c.stringWidth(raw_line, regular_font, size)
+            tx = right_x + (right_w - tw) / 2
+            c.drawString(tx, y, raw_line)
+            y += size + gap_h
 
 
 def _draw_ticket_at_origin(

@@ -55,6 +55,42 @@ def _fit_font_for_text(
     return _get_font(min_size)
 
 
+def _fit_font_size_for_width(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    max_w: float,
+    max_size: int,
+    min_size: int = 8,
+) -> int:
+    size = max(min_size, max_size)
+    while size >= min_size:
+        font = _get_font(size)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        w = bbox[2] - bbox[0]
+        if w <= max_w + 1e-6:
+            return size
+        size -= 1
+    return min_size
+
+
+def _fit_font_size_for_width_scaled(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    max_w: float,
+    max_size: int,
+    scale: float,
+    ref_scale: float = 4.0,
+    min_size: int = 8,
+) -> int:
+    if scale <= 0:
+        return min_size
+    factor = ref_scale / scale
+    size_ref = _fit_font_size_for_width(draw, text, max_w * factor, int(max_size * factor), min_size=min_size)
+    return max(min_size, int(size_ref * scale / ref_scale))
+
+
+
+
 def _draw_header(
     img: Image.Image,
     draw: ImageDraw.ImageDraw,
@@ -197,28 +233,43 @@ def _draw_header(
             pass
     else:
         # Org text (multiline, giữ nguyên khoảng trắng, canh giữa ngang + dọc)
-        lines = header.org_text.splitlines()
+        lines = header.org_text.splitlines() or [""]
         lines = lines[:6]
-        if lines:
-            per_line_h = right_h / max(1, len(lines))
-            total_h = per_line_h * len(lines)
-            y = right_y + (right_h - total_h) / 2
-            for line in lines:
-                raw_line = line if line != "" else " "
-                font = _fit_font_for_text(
-                    draw,
-                    raw_line,
-                    max_w=right_col_w - 2 * gap,
-                    max_h=per_line_h * 0.95,
-                    prefer_bold=False,
-                    min_size=8,
-                    max_size=int(per_line_h * 0.95),
-                )
-                bbox = draw.textbbox((0, 0), raw_line, font=font)
-                tw = bbox[2] - bbox[0]
-                tx = right_x + (right_col_w - tw) / 2
-                draw.text((tx, y), raw_line, font=font, fill=(15, 23, 42))
-                y += per_line_h
+        max_w = right_col_w - 2 * gap
+
+        # Compute per-line sizes based on width only (stable across zoom)
+        sizes: list[int] = []
+        max_size = int(right_h * 0.6)
+        for line in lines:
+            raw_line = line if line != "" else " "
+            size = _fit_font_size_for_width_scaled(
+                draw,
+                raw_line,
+                max_w,
+                max_size,
+                scale=scale,
+                min_size=8,
+            )
+            sizes.append(size)
+
+        total_text_h = sum(sizes)
+        if len(sizes) > 1:
+            remaining = max(0.0, right_h - total_text_h)
+            min_size = min(sizes)
+            gap_h = min(remaining / (len(sizes) - 1), min_size * 0.25)
+        else:
+            gap_h = 0.0
+        total_h = total_text_h + gap_h * max(0, len(sizes) - 1)
+        y = right_y + (right_h - total_h) / 2
+
+        for line, size in zip(lines, sizes, strict=False):
+            raw_line = line if line != "" else " "
+            font = _get_font(size)
+            bbox = draw.textbbox((0, 0), raw_line, font=font)
+            tw = bbox[2] - bbox[0]
+            tx = right_x + (right_col_w - tw) / 2
+            draw.text((tx, y), raw_line, font=font, fill=(15, 23, 42))
+            y += size + gap_h
 
 
 def render_ticket_preview(
