@@ -27,6 +27,7 @@ DEFAULT_GRID = GridSpec(
 DEFAULT_PRINT = PrintSpec(
     mode="TICKET",
     page_size="A4",
+    orientation="PORTRAIT",
     margin_mm=5.0,
     spacing_mm=2.0,
     tickets_per_page=6,

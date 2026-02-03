@@ -44,6 +44,7 @@ class GridSpecDict(TypedDict):
 class PrintSpecDict(TypedDict):
     mode: str
     page_size: str
+    orientation: str
     margin_mm: float
     spacing_mm: float
     tickets_per_page: int
@@ -102,6 +103,7 @@ def save_preset(
         "print_spec": {
             "mode": str(print_spec.mode),
             "page_size": str(print_spec.page_size),
+            "orientation": str(print_spec.orientation),
             "margin_mm": float(print_spec.margin_mm),
             "spacing_mm": float(print_spec.spacing_mm),
             "tickets_per_page": int(print_spec.tickets_per_page),
@@ -190,11 +192,14 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
 
     mode = p_obj.get("mode")
     page_size = p_obj.get("page_size")
+    orientation = p_obj.get("orientation")
     margin = p_obj.get("margin_mm")
     spacing = p_obj.get("spacing_mm")
     tickets_per_page = p_obj.get("tickets_per_page")
     if not isinstance(page_size, str):
         raise ValueError("PrintSpec không hợp lệ (page_size).")
+    if not isinstance(orientation, str):
+        orientation = PrintSpec().orientation
     if not isinstance(margin, (int, float)) or not isinstance(spacing, (int, float)):
         raise ValueError("PrintSpec không hợp lệ (margin_mm/spacing_mm).")
 
@@ -217,6 +222,7 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
     print_spec = PrintSpec(
         mode=str(mode),
         page_size=page_size,
+        orientation=str(orientation),
         margin_mm=float(margin),
         spacing_mm=float(spacing),
         tickets_per_page=int(tickets_per_page),

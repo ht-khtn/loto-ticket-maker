@@ -329,69 +329,78 @@ class MainWindow(QMainWindow):
         self.page_size.setCurrentText(DEFAULT_PRINT.page_size.upper())
         lay.addWidget(self.page_size, 1, 1)
 
-        lay.addWidget(QLabel("Cao header (mm)"), 2, 0)
+        lay.addWidget(QLabel("Hướng giấy"), 2, 0)
+        self.page_orientation = QComboBox()
+        self.page_orientation.addItems(["PORTRAIT", "LANDSCAPE"])
+        self.page_orientation.setCurrentText(DEFAULT_PRINT.orientation.upper())
+        lay.addWidget(self.page_orientation, 2, 1)
+
+        lay.addWidget(QLabel("Cao header (mm)"), 3, 0)
         self.header_height_mm = QDoubleSpinBox()
         self.header_height_mm.setRange(0.0, 60.0)
         self.header_height_mm.setDecimals(1)
         self.header_height_mm.setSingleStep(1.0)
         self.header_height_mm.setValue(DEFAULT_GRID.header_height_mm)
-        lay.addWidget(self.header_height_mm, 2, 1)
+        lay.addWidget(self.header_height_mm, 3, 1)
 
-        lay.addWidget(QLabel("Khoảng cách header (mm)"), 3, 0)
+        lay.addWidget(QLabel("Khoảng cách header (mm)"), 4, 0)
         self.header_spacing_mm = QDoubleSpinBox()
         self.header_spacing_mm.setRange(0.0, 20.0)
         self.header_spacing_mm.setDecimals(1)
         self.header_spacing_mm.setSingleStep(0.5)
         self.header_spacing_mm.setValue(DEFAULT_GRID.header_spacing_mm)
-        lay.addWidget(self.header_spacing_mm, 3, 1)
+        lay.addWidget(self.header_spacing_mm, 4, 1)
 
-        lay.addWidget(QLabel("Khoảng cách nhóm 3 hàng (mm)"), 4, 0)
+        lay.addWidget(QLabel("Khoảng cách nhóm 3 hàng (mm)"), 5, 0)
         self.row_group_gap_mm = QDoubleSpinBox()
         self.row_group_gap_mm.setRange(0.0, 20.0)
         self.row_group_gap_mm.setDecimals(1)
         self.row_group_gap_mm.setSingleStep(0.5)
         self.row_group_gap_mm.setValue(DEFAULT_GRID.row_group_gap_mm)
-        lay.addWidget(self.row_group_gap_mm, 4, 1)
+        lay.addWidget(self.row_group_gap_mm, 5, 1)
 
-        lay.addWidget(QLabel("Số vé xuất"), 5, 0)
+        lay.addWidget(QLabel("Số vé xuất"), 6, 0)
         self.ticket_count = QSpinBox()
         self.ticket_count.setRange(1, 200)
         self.ticket_count.setValue(6)
-        lay.addWidget(self.ticket_count, 5, 1)
+        lay.addWidget(self.ticket_count, 6, 1)
 
-        lay.addWidget(QLabel("Vé / trang"), 6, 0)
+        lay.addWidget(QLabel("Vé / trang"), 7, 0)
         self.tickets_per_page = QSpinBox()
         self.tickets_per_page.setRange(1, 40)
         self.tickets_per_page.setValue(DEFAULT_PRINT.tickets_per_page)
-        lay.addWidget(self.tickets_per_page, 6, 1)
+        lay.addWidget(self.tickets_per_page, 7, 1)
 
-        lay.addWidget(QLabel("Lề (mm)"), 7, 0)
+        lay.addWidget(QLabel("Lề (mm)"), 8, 0)
         self.margin_mm = QDoubleSpinBox()
         self.margin_mm.setRange(0.0, 50.0)
         self.margin_mm.setDecimals(1)
         self.margin_mm.setSingleStep(1.0)
         self.margin_mm.setValue(DEFAULT_PRINT.margin_mm)
-        lay.addWidget(self.margin_mm, 7, 1)
+        lay.addWidget(self.margin_mm, 8, 1)
 
-        lay.addWidget(QLabel("Khoảng cách vé (mm)"), 8, 0)
+        lay.addWidget(QLabel("Khoảng cách vé (mm)"), 9, 0)
         self.spacing_mm = QDoubleSpinBox()
         self.spacing_mm.setRange(0.0, 50.0)
         self.spacing_mm.setDecimals(1)
         self.spacing_mm.setSingleStep(1.0)
         self.spacing_mm.setValue(DEFAULT_PRINT.spacing_mm)
-        lay.addWidget(self.spacing_mm, 8, 1)
+        lay.addWidget(self.spacing_mm, 9, 1)
 
         note = QLabel("PAGE mode: auto-fit theo vé/trang. TICKET mode: mỗi vé 1 trang đúng kích thước vé.")
         note.setWordWrap(True)
         note.setStyleSheet("color: #6B7280;")
-        lay.addWidget(note, 9, 0, 1, 2)
+        lay.addWidget(note, 10, 0, 1, 2)
         self._refresh_print_ui()
         return box
 
     def _refresh_print_ui(self) -> None:
         is_page = self.mode_page.isChecked()
         self.page_size.setEnabled(is_page)
+        self.page_orientation.setEnabled(is_page)
         self.tickets_per_page.setEnabled(is_page)
+        self.margin_mm.setEnabled(is_page)
+        self.spacing_mm.setEnabled(is_page)
 
     def _refresh_template_ui(self) -> None:
         if self._background_path:
@@ -431,6 +440,7 @@ class MainWindow(QMainWindow):
         return PrintSpec(
             mode=mode,
             page_size=str(self.page_size.currentText()),
+            orientation=str(self.page_orientation.currentText()),
             margin_mm=float(self.margin_mm.value()),
             spacing_mm=float(self.spacing_mm.value()),
             tickets_per_page=int(self.tickets_per_page.value()),
@@ -535,6 +545,7 @@ class MainWindow(QMainWindow):
         self.mode_ticket.setChecked(mode == "TICKET")
         self.mode_page.setChecked(mode != "TICKET")
         self.page_size.setCurrentText(str(print_spec.page_size).upper())
+        self.page_orientation.setCurrentText(str(print_spec.orientation).upper())
         self.margin_mm.setValue(print_spec.margin_mm)
         self.spacing_mm.setValue(print_spec.spacing_mm)
         self.tickets_per_page.setValue(print_spec.tickets_per_page)
@@ -572,6 +583,7 @@ class MainWindow(QMainWindow):
         self.header_height_mm.valueChanged.connect(self._schedule_preview)
         self.header_spacing_mm.valueChanged.connect(self._schedule_preview)
         self.page_size.currentTextChanged.connect(self._schedule_preview)
+        self.page_orientation.currentTextChanged.connect(self._schedule_preview)
         self.tickets_per_page.valueChanged.connect(self._schedule_preview)
         self.margin_mm.valueChanged.connect(self._schedule_preview)
         self.spacing_mm.valueChanged.connect(self._schedule_preview)

@@ -358,6 +358,14 @@ def render_ticket_preview(
     return img
 
 
+def _page_mm_size(page_size: str, orientation: str) -> tuple[float, float]:
+    name = page_size.upper().strip()
+    w, h = (210.0, 297.0) if name != "A5" else (148.0, 210.0)
+    if orientation.upper() == "LANDSCAPE":
+        return h, w
+    return w, h
+
+
 def render_page_preview(
     print_spec: PrintSpec,
     template: TicketTemplateSpec,
@@ -368,11 +376,7 @@ def render_page_preview(
     scale: float = 3.0,
     ref_scale: float | None = None,
 ) -> Image.Image:
-    page = print_spec.page_size.upper()
-    if page == "A5":
-        page_w_mm, page_h_mm = 148.0, 210.0
-    else:
-        page_w_mm, page_h_mm = 210.0, 297.0
+    page_w_mm, page_h_mm = _page_mm_size(print_spec.page_size, print_spec.orientation)
 
     page_w_px = max(1, int(page_w_mm * scale))
     page_h_px = max(1, int(page_h_mm * scale))

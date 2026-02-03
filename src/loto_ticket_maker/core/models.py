@@ -49,6 +49,7 @@ class PrintSpec:
     mode: str = "PAGE"
 
     page_size: str = "A4"  # A4, A5
+    orientation: str = "PORTRAIT"  # PORTRAIT, LANDSCAPE
     margin_mm: float = 8.0
     spacing_mm: float = 4.0
     tickets_per_page: int = 6

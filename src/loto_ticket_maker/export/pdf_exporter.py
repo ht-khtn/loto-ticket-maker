@@ -35,11 +35,12 @@ class PdfExportResult:
 _PRINT_RENDER_SCALE = 8.0
 
 
-def _page_mm_size(page_size: str) -> tuple[float, float]:
+def _page_mm_size(page_size: str, orientation: str) -> tuple[float, float]:
     name = page_size.upper().strip()
-    if name == "A5":
-        return 148.0, 210.0
-    return 210.0, 297.0
+    w, h = (210.0, 297.0) if name != "A5" else (148.0, 210.0)
+    if orientation.upper() == "LANDSCAPE":
+        return h, w
+    return w, h
 
 
 def _draw_ticket_image(
@@ -120,9 +121,11 @@ def export_tickets_pdf(
         page_w, page_h = A5
     else:
         page_w, page_h = A4
+    if print_spec.orientation.upper() == "LANDSCAPE":
+        page_w, page_h = page_h, page_w
     c = canvas.Canvas(out_path, pagesize=(page_w, page_h))
 
-    page_w_mm, page_h_mm = _page_mm_size(print_spec.page_size)
+    page_w_mm, page_h_mm = _page_mm_size(print_spec.page_size, print_spec.orientation)
     layout = compute_page_layout(
         page_w_mm=page_w_mm,
         page_h_mm=page_h_mm,
