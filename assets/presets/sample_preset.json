@@ -22,15 +22,15 @@
     "row_group_gap_mm": 2.0
   },
   "print_spec": {
-    "mode": "TICKET",
+    "mode": "PAGE",
     "page_size": "A4",
-    "orientation": "PORTRAIT",
+    "orientation": "LANDSCAPE",
     "margin_mm": 5.0,
-    "spacing_mm": 2.0,
-    "tickets_per_page": 6
+    "spacing_mm": 10.0,
+    "tickets_per_page": 4
   },
   "ui": {
     "seed": 1,
-    "ticket_count": 6
+    "ticket_count": 100
   }
 }

@@ -310,8 +310,8 @@ class MainWindow(QMainWindow):
         mode_lay = QVBoxLayout(mode_wrap)
         mode_lay.setContentsMargins(0, 0, 0, 0)
 
-        self.mode_page = QRadioButton("Theo trang A4/A5 (tự canh vừa trang)")
-        self.mode_ticket = QRadioButton("Theo vé (mỗi vé 1 trang)")
+        self.mode_page = QRadioButton("Theo trang")
+        self.mode_ticket = QRadioButton("Theo vé")
         self._mode_group = QButtonGroup(self)
         self._mode_group.addButton(self.mode_page)
         self._mode_group.addButton(self.mode_ticket)
@@ -337,7 +337,7 @@ class MainWindow(QMainWindow):
         self._set_page_orientation(str(DEFAULT_PRINT.orientation))
         lay.addWidget(self.page_orientation, 2, 1)
 
-        lay.addWidget(QLabel("Cao khung đầu vé (mm)"), 3, 0)
+        lay.addWidget(QLabel("Chiều cao khung đầu vé (mm)"), 3, 0)
         self.header_height_mm = QDoubleSpinBox()
         self.header_height_mm.setRange(0.0, 60.0)
         self.header_height_mm.setDecimals(1)
@@ -345,7 +345,7 @@ class MainWindow(QMainWindow):
         self.header_height_mm.setValue(DEFAULT_GRID.header_height_mm)
         lay.addWidget(self.header_height_mm, 3, 1)
 
-        lay.addWidget(QLabel("Cách khung đầu vé (mm)"), 4, 0)
+        lay.addWidget(QLabel("Khoảng cách khung đầu vé (mm)"), 4, 0)
         self.header_spacing_mm = QDoubleSpinBox()
         self.header_spacing_mm.setRange(0.0, 20.0)
         self.header_spacing_mm.setDecimals(1)
@@ -353,7 +353,7 @@ class MainWindow(QMainWindow):
         self.header_spacing_mm.setValue(DEFAULT_GRID.header_spacing_mm)
         lay.addWidget(self.header_spacing_mm, 4, 1)
 
-        lay.addWidget(QLabel("Cách nhóm 3 hàng (mm)"), 5, 0)
+        lay.addWidget(QLabel("Khoảng cách nhóm 3 hàng (mm)"), 5, 0)
         self.row_group_gap_mm = QDoubleSpinBox()
         self.row_group_gap_mm.setRange(0.0, 20.0)
         self.row_group_gap_mm.setDecimals(1)
@@ -381,7 +381,7 @@ class MainWindow(QMainWindow):
         self.margin_mm.setValue(DEFAULT_PRINT.margin_mm)
         lay.addWidget(self.margin_mm, 8, 1)
 
-        lay.addWidget(QLabel("Cách giữa các vé (mm)"), 9, 0)
+        lay.addWidget(QLabel("Khoảng cách giữa các vé (mm)"), 9, 0)
         self.spacing_mm = QDoubleSpinBox()
         self.spacing_mm.setRange(0.0, 50.0)
         self.spacing_mm.setDecimals(1)
@@ -390,7 +390,7 @@ class MainWindow(QMainWindow):
         lay.addWidget(self.spacing_mm, 9, 1)
 
         note = QLabel(
-            "Theo trang: tự canh theo vé/trang. Theo vé: mỗi vé 1 trang đúng kích thước vé."
+            "Theo trang: tự canh theo vé/trang. \nTheo vé: mỗi vé 1 trang đúng kích thước vé."
         )
         note.setWordWrap(True)
         note.setStyleSheet("color: #6B7280;")
