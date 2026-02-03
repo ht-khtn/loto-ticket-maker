@@ -8,7 +8,7 @@ __pycache__/
 .dist/
 build/
 dist/
-*.spec
+*.bat
 .vscode/
 .idea/
 *.pdf
