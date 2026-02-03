@@ -7,7 +7,7 @@ Set-Location $scriptPath
 Write-Host ""
 Write-Host "===== Loto Ticket Maker Build Script =====" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Chọn option:" -ForegroundColor Yellow
+Write-Host "Chon option:" -ForegroundColor Yellow
 Write-Host "1. Build nhanh (su dung cache cu)"
 Write-Host "2. Build sach (xoa cache build lai tu dau))"
 Write-Host ""
