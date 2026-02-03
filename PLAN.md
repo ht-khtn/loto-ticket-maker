@@ -99,6 +99,12 @@ Ngày: 2026-02-03
 
 ## 6) Việc cần bạn xác nhận
 
-1. Dạng vé: 3x9 (loto VN) hay 5x5 (bingo)?
-2. Kích thước vé (mm) và khổ giấy in mặc định?
-3. Có cần logo/QR/serial, hoặc vùng ghi thông tin không?
+Đã chốt:
+
+- Dạng vé: **loto VN 3x9**
+- Khổ giấy in: **A4**
+
+Còn cần bạn xác nhận thêm:
+
+1. Kích thước vé (mm) theo mẫu bạn muốn in.
+2. Có cần logo/QR/serial, hoặc vùng ghi thông tin không?

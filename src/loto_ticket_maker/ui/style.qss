@@ -1,0 +1,59 @@
+/* Style đơn giản để UI nhìn hiện đại hơn */
+
+QMainWindow {
+  background: #0B1220;
+}
+
+QGroupBox {
+  color: #E5E7EB;
+  border: 1px solid #1F2937;
+  border-radius: 10px;
+  margin-top: 10px;
+  padding: 10px;
+}
+
+QGroupBox::title {
+  subcontrol-origin: margin;
+  subcontrol-position: top left;
+  padding: 0 6px;
+}
+
+QLabel {
+  color: #E5E7EB;
+}
+
+QFrame[panel="true"] {
+  background: #0F172A;
+  border: 1px solid #1F2937;
+  border-radius: 12px;
+}
+
+QPushButton {
+  background: #2563EB;
+  color: white;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+QPushButton:hover {
+  background: #1D4ED8;
+}
+
+QPushButton:disabled {
+  background: #334155;
+  color: #CBD5E1;
+}
+
+QSpinBox {
+  background: #111827;
+  color: #E5E7EB;
+  border: 1px solid #1F2937;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+QScrollArea {
+  border: none;
+}

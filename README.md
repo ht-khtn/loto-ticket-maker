@@ -30,7 +30,7 @@ App tạo vé loto (bingo) với giao diện GUI: tạo nền vé, sinh ô số 
 ## Yêu cầu môi trường
 
 - Windows 10/11
-- Python 3.11+ (khuyến nghị 3.11 hoặc 3.12)
+- Python 3.10+ (khuyến nghị 3.10+; nếu có 3.11+ càng tốt)
 
 ## Cài đặt
 
@@ -70,8 +70,9 @@ Gợi ý: khi app có asset (ảnh nền, font), cần cấu hình `--add-data`.
 
 ## Góp ý / mở rộng
 
-Bạn có thể xác nhận giúp mình 3 điểm để chốt chuẩn in ấn:
+Đã chốt: **loto VN 3x9** và **in A4**.
 
-1. Kích thước vé: A6? 10x15cm? hay custom theo mm?
-2. Quy luật ô số: dạng 3x9 (loto VN) hay 5x5 (bingo)?
-3. Font, màu sắc, logo/QR có cần không?
+Bạn xác nhận thêm giúp mình:
+
+1. Kích thước vé (mm): ví dụ 100×150mm hay theo mẫu cụ thể?
+2. Vé có cần font/màu/logo/QR/serial không?
