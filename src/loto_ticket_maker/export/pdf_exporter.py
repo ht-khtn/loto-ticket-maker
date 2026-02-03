@@ -11,19 +11,16 @@ Sau đó:
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
 from typing import Optional
 
 from reportlab.lib.pagesizes import A4, A5
 from reportlab.lib.utils import ImageReader
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-from ..core.grid_generator import generate_grid_rects_mm
 from ..core.layout import compute_page_layout
 from ..core.models import GridSpec, PrintSpec, TicketHeaderSpec, TicketTemplateSpec
 from ..core.exceptions import LayoutError
+from ..render.ticket_renderer import render_ticket_preview
 
 
 def mm_to_pt(mm: float) -> float:
@@ -35,30 +32,7 @@ class PdfExportResult:
     path: str
 
 
-_font_regular = "Helvetica"
-_font_bold = "Helvetica-Bold"
-
-
-def _ensure_fonts() -> tuple[str, str]:
-    global _font_regular, _font_bold
-
-    arial = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", "arial.ttf")
-    arial_bold = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", "arialbd.ttf")
-
-    try:
-        if os.path.exists(arial) and "Arial" not in pdfmetrics.getRegisteredFontNames():
-            pdfmetrics.registerFont(TTFont("Arial", arial))  # type: ignore[reportUnknownMemberType]
-        if os.path.exists(arial_bold) and "Arial-Bold" not in pdfmetrics.getRegisteredFontNames():
-            pdfmetrics.registerFont(TTFont("Arial-Bold", arial_bold))  # type: ignore[reportUnknownMemberType]
-        if "Arial" in pdfmetrics.getRegisteredFontNames():
-            _font_regular = "Arial"
-        if "Arial-Bold" in pdfmetrics.getRegisteredFontNames():
-            _font_bold = "Arial-Bold"
-    except Exception:
-        _font_regular = "Helvetica"
-        _font_bold = "Helvetica-Bold"
-
-    return _font_regular, _font_bold
+_PRINT_RENDER_SCALE = 8.0
 
 
 def _page_mm_size(page_size: str) -> tuple[float, float]:
@@ -68,280 +42,37 @@ def _page_mm_size(page_size: str) -> tuple[float, float]:
     return 210.0, 297.0
 
 
-def _fit_font_size(
-    c: canvas.Canvas,
-    text: str,
-    font_name: str,
-    max_w: float,
-    max_h: float,
-    min_size: int = 8,
-    max_size: int = 48,
-) -> int:
-    if not text:
-        return min_size
-    size = max(min_size, min(max_size, int(max_h)))
-    while size >= min_size:
-        if c.stringWidth(text, font_name, size) <= max_w + 1e-6:
-            return size
-        size -= 1
-    return min_size
-
-
-def _fit_font_size_for_width(
-    c: canvas.Canvas,
-    text: str,
-    font_name: str,
-    max_w: float,
-    max_size: int,
-    min_size: int = 8,
-) -> int:
-    size = max(min_size, max_size)
-    while size >= min_size:
-        if c.stringWidth(text, font_name, size) <= max_w + 1e-6:
-            return size
-        size -= 1
-    return min_size
-
-
-
-
-def _draw_header(
-    c: canvas.Canvas,
-    template: TicketTemplateSpec,
-    grid: GridSpec,
-    header: TicketHeaderSpec,
-    seed: Optional[int],
-) -> None:
-    header_h_mm = max(0.0, float(grid.header_height_mm))
-    if header_h_mm <= 0:
-        return
-
-    ticket_w = mm_to_pt(template.width_mm)
-    ticket_h = mm_to_pt(template.height_mm)
-    pad = mm_to_pt(grid.padding_mm)
-
-    x1 = pad
-    x2 = ticket_w - pad
-    y_top = ticket_h - pad
-    y1 = y_top - mm_to_pt(header_h_mm)
-
-    radius = mm_to_pt(2.0)
-    try:
-        c.roundRect(x1, y1, x2 - x1, y_top - y1, radius)
-    except Exception:
-        c.rect(x1, y1, x2 - x1, y_top - y1)
-
-    inner_w = max(1.0, x2 - x1)
-    inner_h = max(1.0, y_top - y1)
-    gap = max(4.0, inner_w * 0.02)
-
-    left_w = inner_w * 0.34
-    right_w = inner_w - left_w
-
-    left_x = x1 + gap
-    right_x = x1 + left_w + gap
-
-    regular_font, bold_font = _ensure_fonts()
-
-    # LEFT COLUMN: Round Name (top) + Seed (below), centered
-    available_h = inner_h - 2 * gap
-    round_text = header.round_name
-    round_size = 0
-    round_w = 0.0
-    if round_text:
-        round_size = _fit_font_size(
-            c,
-            round_text,
-            font_name=bold_font,
-            max_w=left_w - 2 * gap,
-            max_h=available_h * 0.35,
-            min_size=10,
-            max_size=int(available_h * 0.4),
-        )
-        round_w = c.stringWidth(round_text, bold_font, round_size)
-
-    seed_text = None
-    seed_size = 0
-    seed_w = 0.0
-    if seed is not None:
-        seed_text = str(seed)
-        if header.seed_pad_length > 0:
-            seed_text = seed_text.zfill(header.seed_pad_length)
-        seed_size = _fit_font_size(
-            c,
-            seed_text,
-            font_name=bold_font,
-            max_w=left_w - 2 * gap,
-            max_h=available_h * 0.55,
-            min_size=12,
-            max_size=int(available_h * 0.6),
-        )
-        seed_w = c.stringWidth(seed_text, bold_font, seed_size)
-
-    total_h = 0.0
-    if round_text:
-        total_h += round_size
-    if seed_text:
-        total_h += seed_size
-    if round_text and seed_text:
-        total_h += gap * 0.5
-    top_y = y1 + (inner_h - total_h) / 2 + total_h
-
-    if round_text:
-        c.setFont(bold_font, round_size)
-        rx = left_x + (left_w - round_w) / 2
-        c.drawString(rx, top_y - round_size, round_text)
-        top_y = top_y - round_size - gap * 0.5
-
-    if seed_text:
-        c.setFont(bold_font, seed_size)
-        sx = left_x + (left_w - seed_w) / 2
-        sy = top_y - seed_size
-
-        # dashed rounded border around seed
-        pad = max(3.0, gap * 0.4)
-        bx1 = sx - pad
-        by1 = sy - pad * 0.3
-        bw = seed_w + pad * 2
-        bh = seed_size + pad * 0.6
-        try:
-            c.saveState()
-            c.setDash(3, 3)
-            c.setStrokeColorRGB(0.23, 0.51, 0.96)
-            c.roundRect(bx1, by1, bw, bh, radius)
-            c.restoreState()
-        except Exception:
-            pass
-
-        c.setFillColorRGB(0.23, 0.51, 0.96)
-        c.drawString(sx, sy, seed_text)
-        c.setFillColorRGB(0, 0, 0)
-
-    # RIGHT COLUMN: Org image or org text
-    if header.org_image_path:
-        try:
-            c.drawImage(  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
-                ImageReader(header.org_image_path),
-                right_x + gap,
-                y1 + gap,
-                width=right_w - 2 * gap,
-                height=inner_h - 2 * gap,
-                preserveAspectRatio=True,
-                anchor="c",
-                mask="auto",
-            )
-        except Exception:
-            pass
-    else:
-        lines = header.org_text.splitlines() or [""]
-        lines = lines[:6]
-        max_w = right_w - 2 * gap
-
-        sizes: list[int] = []
-        max_size = int(inner_h * 0.6)
-        for line in lines:
-            raw_line = line if line != "" else " "
-            size = _fit_font_size_for_width(c, raw_line, regular_font, max_w, max_size)
-            sizes.append(size)
-
-        total_text_h = sum(sizes)
-        if len(sizes) > 1:
-            remaining = max(0.0, inner_h - total_text_h)
-            min_size = min(sizes)
-            gap_h = min(remaining / (len(sizes) - 1), min_size * 0.25)
-        else:
-            gap_h = 0.0
-        total_h = total_text_h + gap_h * max(0, len(sizes) - 1)
-        y = y1 + (inner_h - total_h) / 2
-
-        for line, size in zip(lines, sizes, strict=False):
-            raw_line = line if line != "" else " "
-            c.setFont(regular_font, size)
-            tw = c.stringWidth(raw_line, regular_font, size)
-            tx = right_x + (right_w - tw) / 2
-            c.drawString(tx, y, raw_line)
-            y += size + gap_h
-
-
-def _draw_ticket_at_origin(
-    c: canvas.Canvas,
-    template: TicketTemplateSpec,
-    grid: GridSpec,
-    header: TicketHeaderSpec | None,
-    numbers: Optional[list[list[Optional[int]]]] = None,
-    seed: Optional[int] = None,
-) -> None:
-    """Vẽ 1 vé tại gốc (0,0) (góc dưới-trái của vé)."""
-    ticket_w = mm_to_pt(template.width_mm)
-    ticket_h = mm_to_pt(template.height_mm)
-
-    if template.background_path:
-        try:
-            c.drawImage(  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
-                ImageReader(template.background_path),
-                0,
-                0,
-                width=ticket_w,
-                height=ticket_h,
-                preserveAspectRatio=False,
-                mask="auto",
-            )
-        except Exception:
-            pass
-
-    c.setLineWidth(max(0.25, mm_to_pt(grid.line_width_mm)))
-    c.rect(0, 0, ticket_w, ticket_h)
-
-    if header is not None:
-        _draw_header(c, template, grid, header, seed)
-
-    rects = generate_grid_rects_mm(template, grid)
-    for rect in rects:
-        x = mm_to_pt(rect.x)
-        y = ticket_h - mm_to_pt(rect.y + rect.h)
-        w = mm_to_pt(rect.w)
-        h = mm_to_pt(rect.h)
-        c.rect(x, y, w, h)
-
-    if numbers is None:
-        return
-
-    # Font size theo chiều cao ô
-    cell_h_pt = mm_to_pt(rects[0].h) if rects else mm_to_pt(8.0)
-    _, bold_font = _ensure_fonts()
-    font_size = max(8, min(28, int(cell_h_pt * 0.55)))
-    c.setFont(bold_font, font_size)
-
-    for r in range(min(grid.rows, len(numbers))):
-        row = numbers[r]
-        for col in range(min(grid.cols, len(row))):
-            value = row[col]
-            if value is None:
-                continue
-            rect = rects[r * grid.cols + col]
-            x = mm_to_pt(rect.x)
-            y = ticket_h - mm_to_pt(rect.y + rect.h)
-            w = mm_to_pt(rect.w)
-            h = mm_to_pt(rect.h)
-            c.drawCentredString(x + w / 2, y + h / 2 - font_size * 0.35, str(value))
-
-
-def _draw_ticket_scaled(
+def _draw_ticket_image(
     c: canvas.Canvas,
     origin_x: float,
     origin_y: float,
-    scale: float,
+    width_pt: float,
+    height_pt: float,
     template: TicketTemplateSpec,
     grid: GridSpec,
     header: TicketHeaderSpec | None,
     numbers: Optional[list[list[Optional[int]]]] = None,
     seed: Optional[int] = None,
+    render_scale: float = _PRINT_RENDER_SCALE,
 ) -> None:
-    c.saveState()
-    c.translate(origin_x, origin_y)
-    c.scale(scale, scale)
-    _draw_ticket_at_origin(c, template, grid, header, numbers=numbers, seed=seed)
-    c.restoreState()
+    img = render_ticket_preview(
+        template=template,
+        grid=grid,
+        header=header,
+        numbers=numbers,
+        seed=seed,
+        scale=render_scale,
+        ref_scale=4.0,
+    )
+    c.drawImage(  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+        ImageReader(img),
+        origin_x,
+        origin_y,
+        width=width_pt,
+        height=height_pt,
+        preserveAspectRatio=False,
+        mask="auto",
+    )
 
 
 def export_tickets_pdf(
@@ -367,16 +98,18 @@ def export_tickets_pdf(
         c = canvas.Canvas(out_path, pagesize=(page_w, page_h))
         for idx, numbers in enumerate(tickets):
             seed = seeds[idx] if seeds and idx < len(seeds) else None
-            _draw_ticket_scaled(
+            _draw_ticket_image(
                 c,
                 origin_x=0,
                 origin_y=0,
-                scale=1.0,
+                width_pt=page_w,
+                height_pt=page_h,
                 template=template,
                 grid=grid,
                 header=header,
                 numbers=numbers,
                 seed=seed,
+                render_scale=_PRINT_RENDER_SCALE,
             )
             c.showPage()
         c.save()
@@ -427,16 +160,18 @@ def export_tickets_pdf(
         origin_x = margin + col * (ticket_w + spacing)
         origin_y = page_h - margin - ticket_h - r * (ticket_h + spacing)
         seed = seeds[idx] if seeds and idx < len(seeds) else None
-        _draw_ticket_scaled(
+        _draw_ticket_image(
             c,
             origin_x=origin_x,
             origin_y=origin_y,
-            scale=layout.scale,
+            width_pt=ticket_w,
+            height_pt=ticket_h,
             template=template,
             grid=grid,
             header=header,
             numbers=numbers,
             seed=seed,
+            render_scale=_PRINT_RENDER_SCALE * layout.scale,
         )
 
     c.showPage()

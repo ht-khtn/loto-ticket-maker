@@ -656,6 +656,7 @@ class MainWindow(QMainWindow):
                 tickets=tickets,
                 seeds=seeds,
                 scale=3.0 * render_zoom,
+                ref_scale=3.0,
             )
         else:
             numbers = generate_loto_15x6(seed=base_seed)
@@ -666,6 +667,7 @@ class MainWindow(QMainWindow):
                 numbers=numbers,
                 seed=base_seed,
                 scale=4.0 * render_zoom,
+                ref_scale=4.0,
             )
 
         pix = pil_to_qpixmap(img)

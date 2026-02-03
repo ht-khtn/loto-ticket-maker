@@ -4,8 +4,8 @@ from loto_ticket_maker.core.models import GridSpec, PrintSpec, TicketHeaderSpec,
 
 
 DEFAULT_TEMPLATE = TicketTemplateSpec(
-    width_mm=50.0,
-    height_mm=150.0,
+    width_mm=100.0,
+    height_mm=300.0,
 )
 
 DEFAULT_HEADER = TicketHeaderSpec(
@@ -18,8 +18,8 @@ DEFAULT_HEADER = TicketHeaderSpec(
 DEFAULT_GRID = GridSpec(
     rows=15,
     cols=6,
-    header_height_mm=18.0,
-    header_spacing_mm=2.0,
+    header_height_mm=25.0,
+    header_spacing_mm=5.0,
     row_group_size=3,
     row_group_gap_mm=2.0,
 )

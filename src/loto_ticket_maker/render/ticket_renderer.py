@@ -79,7 +79,7 @@ def _fit_font_size_for_width_scaled(
     max_w: float,
     max_size: int,
     scale: float,
-    ref_scale: float = 4.0,
+    ref_scale: float,
     min_size: int = 8,
 ) -> int:
     if scale <= 0:
@@ -99,6 +99,7 @@ def _draw_header(
     header: TicketHeaderSpec,
     seed: int | None,
     scale: float,
+    ref_scale: float,
 ) -> None:
     header_h_mm = max(0.0, float(grid.header_height_mm))
     if header_h_mm <= 0:
@@ -187,10 +188,11 @@ def _draw_header(
         sy = start_y
         # Dashed rounded border around seed
         pad = max(4.0, gap * 0.4)
-        bx1 = sx - pad
-        by1 = sy - pad * 0.4
-        bx2 = sx + seed_size[0] + pad
-        by2 = sy + seed_size[1] + pad * 0.4
+        bbox = draw.textbbox((sx, sy), seed_text, font=seed_font)
+        bx1 = bbox[0] - pad
+        by1 = bbox[1] - pad * 0.2
+        bx2 = bbox[2] + pad
+        by2 = bbox[3] + pad * 1.1
         dash = max(4, int(pad * 0.8))
         gap_len = max(3, int(pad * 0.6))
         # draw dashed edges
@@ -248,6 +250,7 @@ def _draw_header(
                 max_w,
                 max_size,
                 scale=scale,
+                ref_scale=ref_scale,
                 min_size=8,
             )
             sizes.append(size)
@@ -256,7 +259,7 @@ def _draw_header(
         if len(sizes) > 1:
             remaining = max(0.0, right_h - total_text_h)
             min_size = min(sizes)
-            gap_h = min(remaining / (len(sizes) - 1), min_size * 0.25)
+            gap_h = min(remaining / (len(sizes) - 1), min_size * 0.35)
         else:
             gap_h = 0.0
         total_h = total_text_h + gap_h * max(0, len(sizes) - 1)
@@ -279,6 +282,7 @@ def render_ticket_preview(
     numbers: list[list[int | None]] | None = None,
     seed: int | None = None,
     scale: float = 4.0,
+    ref_scale: float | None = None,
 ) -> Image.Image:
     """Render vé ra ảnh PIL.
 
@@ -305,8 +309,11 @@ def render_ticket_preview(
         width=max(1, int(grid.line_width_mm * scale)),
     )
 
+    if ref_scale is None:
+        ref_scale = scale
+
     if header is not None:
-        _draw_header(img, draw, template, grid, header, seed=seed, scale=scale)
+        _draw_header(img, draw, template, grid, header, seed=seed, scale=scale, ref_scale=ref_scale)
 
     rects = generate_grid_rects_mm(template, grid)
     stroke_w = max(1, int(grid.line_width_mm * scale))
@@ -359,6 +366,7 @@ def render_page_preview(
     tickets: list[list[list[int | None]]],
     seeds: list[int | None] | None = None,
     scale: float = 3.0,
+    ref_scale: float | None = None,
 ) -> Image.Image:
     page = print_spec.page_size.upper()
     if page == "A5":
@@ -402,6 +410,7 @@ def render_page_preview(
             numbers=tickets[idx],
             seed=seed,
             scale=scale * layout.scale,
+            ref_scale=(ref_scale or scale) * layout.scale,
         )
         img.paste(ticket_img, (x, y))
 
