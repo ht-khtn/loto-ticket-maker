@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PIL import Image
-from PySide6.QtGui import QImage, QPixmap
+from PyQt5.QtGui import QImage, QPixmap
 
 
 def pil_to_qpixmap(img: Image.Image) -> QPixmap:

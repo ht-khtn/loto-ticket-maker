@@ -37,6 +37,7 @@ File này dùng để tick các hạng mục đã làm được theo [PLAN.md](P
 - [x] Preset container riêng + có preset mẫu
 - [x] Việt hoá nhãn UI (dọc/ngang, nhãn gọn gàng)
 - [x] PyInstaller build (exe)
+- [x] Chuyển GUI sang PyQt5 (hỗ trợ 32-bit)
 - [ ] Bộ test cơ bản cho grid/layout
 
 ## RULE.md (Bắt buộc)

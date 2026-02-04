@@ -11,7 +11,7 @@ App tạo vé loto (bingo) với giao diện GUI: tạo nền vé, sinh ô số 
 
 ## Công nghệ đề xuất
 
-- GUI: **PySide6 (Qt)** — giao diện hiện đại, dễ bố trí layout, preview tốt.
+- GUI: **PyQt5 (Qt5)** — tương thích 32-bit, giao diện hiện đại, dễ bố trí layout, preview tốt.
 - Xuất PDF: **reportlab** — kiểm soát bố cục in ấn và đặt nhiều vé/trang.
 - Render preview (tuỳ chọn): **Pillow** — render ảnh preview nhanh trong GUI.
 

@@ -15,9 +15,9 @@ import sys
 from typing import Mapping, cast
 import random
 
-from PySide6.QtCore import Qt, QEvent, QTimer, QObject, QPoint, QRegularExpression
-from PySide6.QtGui import QPixmap, QMouseEvent, QFontDatabase, QRegularExpressionValidator
-from PySide6.QtWidgets import (
+from PyQt5.QtCore import Qt, QEvent, QTimer, QObject, QPoint, QRegularExpression
+from PyQt5.QtGui import QPixmap, QMouseEvent, QFontDatabase, QRegularExpressionValidator
+from PyQt5.QtWidgets import (
     QButtonGroup,
     QComboBox,
     QDoubleSpinBox,
@@ -148,12 +148,12 @@ class MainWindow(QMainWindow):
 
         # Preview area (1/3 of screen)
         preview_container = QFrame(root)
-        preview_container.setFrameShape(QFrame.Shape.StyledPanel)
+        preview_container.setFrameShape(QFrame.StyledPanel)
         preview_container.setProperty("panel", True)
         preview_layout = QVBoxLayout(preview_container)
 
         title = QLabel("Xem trước")
-        title.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         title.setStyleSheet("font-size: 18px; font-weight: 600;")
 
         zoom_wrap = QWidget()
@@ -163,7 +163,7 @@ class MainWindow(QMainWindow):
         zoom_layout.addStretch(1)
         zoom_label = QLabel("Thu phóng")
         self.zoom_value = QLabel("100%")
-        self.zoom_slider = QSlider(Qt.Orientation.Horizontal)
+        self.zoom_slider = QSlider(Qt.Horizontal)
         self.zoom_slider.setRange(50, 200)
         self.zoom_slider.setValue(100)
         self.zoom_slider.valueChanged.connect(self._on_zoom_changed)
@@ -172,7 +172,7 @@ class MainWindow(QMainWindow):
         zoom_layout.addWidget(self.zoom_value)
 
         self.preview_label = QLabel("Xem trước sẽ tự cập nhật theo tuỳ chọn")
-        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self.preview_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.preview_label.setMinimumHeight(500)
         self.preview_label.setStyleSheet("background: #111827; border-radius: 10px;")
 
@@ -196,7 +196,7 @@ class MainWindow(QMainWindow):
         scroll.setWidget(self.preview_label)
         scroll.viewport().installEventFilter(self)
         scroll.viewport().setMouseTracking(True)
-        self.preview_label.setCursor(Qt.CursorShape.OpenHandCursor)
+        self.preview_label.setCursor(Qt.OpenHandCursor)
         self.preview_scroll = scroll
 
         preview_layout.addWidget(zoom_wrap)
@@ -757,7 +757,7 @@ class MainWindow(QMainWindow):
                         self.preview_scroll.horizontalScrollBar().value(),
                         self.preview_scroll.verticalScrollBar().value(),
                     )
-                    self.preview_label.setCursor(Qt.CursorShape.ClosedHandCursor)
+                    self.preview_label.setCursor(Qt.ClosedHandCursor)
                     return True
             elif event.type() == QEvent.Type.MouseMove and self._dragging_preview:
                 if self._drag_start_pos and self._drag_start_scroll:
@@ -770,7 +770,7 @@ class MainWindow(QMainWindow):
                     self._dragging_preview = False
                     self._drag_start_pos = None
                     self._drag_start_scroll = None
-                    self.preview_label.setCursor(Qt.CursorShape.OpenHandCursor)
+                    self.preview_label.setCursor(Qt.OpenHandCursor)
                     return True
         return super().eventFilter(watched, event)
 

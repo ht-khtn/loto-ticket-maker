@@ -16,7 +16,7 @@ Ngày: 2026-02-03
 
 ### GUI
 
-- PySide6 (Qt): layout đẹp, dễ mở rộng (toolbox, sidebar, live preview)
+- PyQt5 (Qt5): tương thích 32-bit, layout đẹp, dễ mở rộng (toolbox, sidebar, live preview)
 
 ### Render & PDF
 
