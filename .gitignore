@@ -1,4 +1,5 @@
 .venv/
+.venv32/
 __pycache__/
 *.pyc
 *.pyd
@@ -7,6 +8,7 @@ __pycache__/
 *.log
 .dist/
 build/
+build32/
 dist/
 *.bat
 .vscode/

@@ -18,6 +18,7 @@ a = Analysis(
         'loto_ticket_maker.core',
         'loto_ticket_maker.render',
         'loto_ticket_maker.export',
+        'PyQt5.sip',
         'PyQt5.QtCore',
         'PyQt5.QtGui',
         'PyQt5.QtWidgets',
@@ -25,7 +26,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludedimports=[],
+    excludes=[],
     noarchive=False,
 )
 
