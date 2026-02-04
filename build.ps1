@@ -7,6 +7,7 @@ Set-Location $scriptPath
 $pythonExe = Join-Path $scriptPath ".venv32\Scripts\python.exe"
 $distPath = Join-Path $scriptPath "dist32"
 $workPath = Join-Path $scriptPath "build32"
+$exePath = Join-Path $distPath "LotoTicketMaker.exe"
 
 if (-not (Test-Path $pythonExe)) {
     Write-Host "Khong tim thay .venv32. Vui long tao moi truong 32-bit truoc." -ForegroundColor Red
@@ -29,11 +30,19 @@ switch ($choice) {
     "1" {
         Write-Host ""
         Write-Host "Building... (su dung cache)" -ForegroundColor Green
+        if (Test-Path $exePath) {
+            Write-Host "Dang xoa file exe cu de tranh bi khoa..." -ForegroundColor Yellow
+            Remove-Item $exePath -Force
+        }
         & $pythonExe -m PyInstaller loto_ticket_maker.spec --distpath $distPath --workpath $workPath
     }
     "2" {
         Write-Host ""
         Write-Host "Building... (clean, xoa cache)" -ForegroundColor Green
+        if (Test-Path $exePath) {
+            Write-Host "Dang xoa file exe cu de tranh bi khoa..." -ForegroundColor Yellow
+            Remove-Item $exePath -Force
+        }
         & $pythonExe -m PyInstaller loto_ticket_maker.spec --clean --distpath $distPath --workpath $workPath
     }
     default {

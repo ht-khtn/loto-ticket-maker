@@ -342,7 +342,7 @@ class MainWindow(QMainWindow):
         lay.addWidget(QLabel("Font chữ"), 6, 0)
         self.font_family = QComboBox()
         self.font_family.addItem("(mặc định)", "")
-        families = sorted(QFontDatabase.families())
+        families = sorted(QFontDatabase().families())
         for name in families:
             self.font_family.addItem(name, name)
         self._set_font_family(str(DEFAULT_HEADER.font_family))
