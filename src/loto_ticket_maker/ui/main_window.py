@@ -14,6 +14,7 @@ import os
 import sys
 from typing import Mapping, cast
 import random
+from datetime import datetime
 
 from PyQt5.QtCore import Qt, QEvent, QTimer, QObject, QPoint, QRegularExpression
 from PyQt5.QtGui import QPixmap, QMouseEvent, QFontDatabase, QRegularExpressionValidator
@@ -871,10 +872,11 @@ class MainWindow(QMainWindow):
 
     def _on_export_pdf(self) -> None:
         self._update_preview()
+        default_name = self._build_default_pdf_name()
         out_path, _ = QFileDialog.getSaveFileName(
             self,
             "Xuất PDF",
-            "loto_tickets_a4.pdf",
+            default_name,
             "Tệp PDF (*.pdf)",
         )
         if not out_path:
@@ -967,3 +969,18 @@ class MainWindow(QMainWindow):
         progress.close()
 
         QMessageBox.information(self, "Thành công", f"Đã xuất PDF: {out_path}")
+
+    def _build_default_pdf_name(self) -> str:
+        header = self._current_header()
+        print_spec = self._current_print()
+        count = int(self.ticket_count.value())
+
+        round_code = (header.round_code or "").strip() or "NA"
+        date_str = datetime.now().strftime("%Y%m%d")
+        mode = str(print_spec.mode).upper().strip()
+
+        if mode == "TICKET":
+            return f"LotoTicket_{round_code}_{count}ve_VeRieng_{date_str}.pdf"
+
+        page_size = str(print_spec.page_size).upper().strip() or "A4"
+        return f"LotoTicket_{round_code}_{count}ve_InTrang_{page_size}_{date_str}.pdf"
