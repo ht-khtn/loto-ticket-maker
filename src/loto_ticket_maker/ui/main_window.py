@@ -14,8 +14,8 @@ import os
 from typing import Mapping, cast
 import random
 
-from PySide6.QtCore import Qt, QEvent, QTimer, QObject, QPoint
-from PySide6.QtGui import QPixmap, QMouseEvent, QFontDatabase
+from PySide6.QtCore import Qt, QEvent, QTimer, QObject, QPoint, QRegularExpression
+from PySide6.QtGui import QPixmap, QMouseEvent, QFontDatabase, QRegularExpressionValidator
 from PySide6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -47,6 +47,7 @@ from ..core.layout import compute_page_layout
 from ..core.exceptions import ExportCanceled
 from ..core.loto_15x6 import generate_loto_15x6
 from ..core.models import GridSpec, PrintSpec, TicketHeaderSpec, TicketTemplateSpec
+from ..core.ticket import compose_ticket_seed
 from ..export.pdf_exporter import export_tickets_pdf
 from ..render.ticket_renderer import render_page_preview, render_ticket_preview
 from .image_utils import pil_to_qpixmap
@@ -308,34 +309,42 @@ class MainWindow(QMainWindow):
         self.round_name.setPlaceholderText("Ví dụ: VÒNG 12")
         lay.addWidget(self.round_name, 0, 1)
 
+        lay.addWidget(QLabel("Mã vòng"), 1, 0)
+        self.round_code = QLineEdit()
+        self.round_code.setPlaceholderText("Ví dụ: A12")
+        self.round_code.setMaxLength(32)
+        self.round_code.setToolTip("Chỉ gồm A..Z và 0..9. Dùng để ghép vào seed vé.")
+        self.round_code.setValidator(QRegularExpressionValidator(QRegularExpression("^[A-Za-z0-9]{0,32}$")))
+        lay.addWidget(self.round_code, 1, 1)
+
         org_label = QLabel("Đơn vị / tổ chức")
-        lay.addWidget(org_label, 1, 0, 1, 2)
+        lay.addWidget(org_label, 2, 0, 1, 2)
         self.org_text = QPlainTextEdit()
         self.org_text.setPlaceholderText("Ví dụ:\nCÔNG TY ABC\nCHI NHÁNH 1")
         self.org_text.setFixedHeight(90)
-        lay.addWidget(self.org_text, 2, 0, 1, 2)
+        lay.addWidget(self.org_text, 3, 0, 1, 2)
 
-        lay.addWidget(QLabel("Hoặc logo/ảnh"), 3, 0)
+        lay.addWidget(QLabel("Hoặc logo/ảnh"), 4, 0)
         self.org_image_label = QLabel("(chưa chọn)")
         self.org_image_label.setWordWrap(True)
         self.org_image_label.setStyleSheet("color: #93C5FD;")
-        lay.addWidget(self.org_image_label, 3, 1)
+        lay.addWidget(self.org_image_label, 4, 1)
 
         btn_org_img = QPushButton("Chọn ảnh…")
         btn_org_img_clear = QPushButton("Xoá")
         btn_org_img.clicked.connect(self._on_choose_org_image)
         btn_org_img_clear.clicked.connect(self._on_clear_org_image)
-        lay.addWidget(btn_org_img, 4, 0)
-        lay.addWidget(btn_org_img_clear, 4, 1)
+        lay.addWidget(btn_org_img, 5, 0)
+        lay.addWidget(btn_org_img_clear, 5, 1)
 
-        lay.addWidget(QLabel("Font chữ"), 5, 0)
+        lay.addWidget(QLabel("Font chữ"), 6, 0)
         self.font_family = QComboBox()
         self.font_family.addItem("(mặc định)", "")
         families = sorted(QFontDatabase.families())
         for name in families:
             self.font_family.addItem(name, name)
         self._set_font_family(str(DEFAULT_HEADER.font_family))
-        lay.addWidget(self.font_family, 5, 1)
+        lay.addWidget(self.font_family, 6, 1)
 
         return box
 
@@ -367,18 +376,12 @@ class MainWindow(QMainWindow):
         self.seed.setToolTip("0 = ngẫu nhiên; số khác 0 để tái tạo đúng vé")
         lay.addWidget(self.seed, 2, 1)
 
-        lay.addWidget(QLabel("Độ dài seed (ký tự)"), 3, 0)
-        self.seed_pad_length = QSpinBox()
-        self.seed_pad_length.setRange(0, 12)
-        self.seed_pad_length.setValue(DEFAULT_HEADER.seed_pad_length)
-        lay.addWidget(self.seed_pad_length, 3, 1)
-
         hint = QLabel(
             "Luật đang dùng: 15x6 (đủ 1..60, mỗi hàng 2 ô trống, trống theo cột 6-5-5-5-5-4)"
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #6B7280;")
-        lay.addWidget(hint, 4, 0, 1, 2)
+        lay.addWidget(hint, 3, 0, 1, 2)
         return box
 
     def _build_print_group(self, parent: QWidget) -> QGroupBox:
@@ -536,7 +539,8 @@ class MainWindow(QMainWindow):
             org_text=str(self.org_text.toPlainText()),
             org_image_path=self._org_image_path,
             round_name=str(self.round_name.text()),
-            seed_pad_length=int(self.seed_pad_length.value()),
+            round_code=str(self.round_code.text()).strip().upper(),
+            seed_pad_length=0,
             font_family=str(self.font_family.currentData() or ""),
         )
 
@@ -649,7 +653,7 @@ class MainWindow(QMainWindow):
         self._org_image_path = header.org_image_path
         self.org_image_label.setText(header.org_image_path or "(chưa chọn)")
         self.round_name.setText(header.round_name)
-        self.seed_pad_length.setValue(header.seed_pad_length)
+        self.round_code.setText(getattr(header, "round_code", ""))
         self._set_font_family(header.font_family)
 
         # Grid cố định 15x6 theo RULE.md
@@ -713,10 +717,19 @@ class MainWindow(QMainWindow):
         self.mode_page.toggled.connect(self._schedule_preview)
         self.mode_ticket.toggled.connect(self._schedule_preview)
         self.round_name.textChanged.connect(self._schedule_preview)
+        self.round_code.textChanged.connect(self._on_round_code_changed)
         self.org_text.textChanged.connect(self._schedule_preview)
-        self.seed_pad_length.valueChanged.connect(self._schedule_preview)
         self.font_family.currentTextChanged.connect(self._schedule_preview)
         self.preview_page.valueChanged.connect(self._schedule_preview)
+
+    def _on_round_code_changed(self) -> None:
+        raw = str(self.round_code.text() or "")
+        upper = raw.upper()
+        if raw != upper:
+            self.round_code.blockSignals(True)
+            self.round_code.setText(upper)
+            self.round_code.blockSignals(False)
+        self._schedule_preview()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if (
@@ -797,9 +810,10 @@ class MainWindow(QMainWindow):
             tickets: list[list[list[int | None]]] = []
             seeds: list[int | None] = []
             for i in range(count):
-                s = base_seed + (start + i)
-                seeds.append(s)
-                tickets.append(generate_loto_15x6(seed=s))
+                base = base_seed + (start + i)
+                effective = compose_ticket_seed(header.round_code, base)
+                seeds.append(effective)
+                tickets.append(generate_loto_15x6(seed=effective))
             img = render_page_preview(
                 print_spec=print_spec,
                 template=template,
@@ -811,13 +825,14 @@ class MainWindow(QMainWindow):
                 ref_scale=3.0,
             )
         else:
-            numbers = generate_loto_15x6(seed=base_seed)
+            effective_seed = compose_ticket_seed(header.round_code, base_seed)
+            numbers = generate_loto_15x6(seed=effective_seed)
             img = render_ticket_preview(
                 template,
                 grid,
                 header=header,
                 numbers=numbers,
-                seed=base_seed,
+                seed=effective_seed,
                 scale=4.0 * render_zoom,
                 ref_scale=4.0,
             )
@@ -853,13 +868,14 @@ class MainWindow(QMainWindow):
         base_seed = self._resolve_base_seed()
         count = int(self.ticket_count.value())
 
-        tickets = (generate_loto_15x6(seed=base_seed + i) for i in range(count))
-        seeds = (base_seed + i for i in range(count))
-
         template = self._current_template()
         header = self._current_header()
         grid = self._current_grid()
         print_spec = self._current_print()
+
+        seeds_list = [compose_ticket_seed(header.round_code, base_seed + i) for i in range(count)]
+        tickets = (generate_loto_15x6(seed=s) for s in seeds_list)
+        seeds = seeds_list
 
         total_pages = 1
         if str(print_spec.mode).upper() == "TICKET":

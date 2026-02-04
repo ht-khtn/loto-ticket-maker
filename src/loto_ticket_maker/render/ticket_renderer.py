@@ -258,7 +258,7 @@ def _header_geometry(template: TicketTemplateSpec, grid: GridSpec, scale: float)
     inner_h = max(1.0, y2 - y1)
     gap = max(6.0, inner_w * 0.02)
 
-    # Left: round_name + seed (nằm gần nhau, không bị ảnh hưởng tên đơn vị)
+    # Left: round_name + round_code (nằm gần nhau, không bị ảnh hưởng tên đơn vị)
     left_col_w = inner_w * 0.34
     left_x = x1 + gap
 
@@ -394,16 +394,17 @@ def _draw_header_static(
             y += size + gap_h
 
 
-def _draw_header_seed(
+def _draw_header_round_code(
     draw: ImageDraw.ImageDraw,
     template: TicketTemplateSpec,
     grid: GridSpec,
     header: TicketHeaderSpec,
-    seed: int | None,
+    round_code: str | None,
     scale: float,
     ref_scale: float,
 ) -> None:
-    if seed is None:
+    code_text = str(round_code or "").strip().upper()
+    if not code_text:
         return
     geom = _header_geometry(template, grid, scale)
     if not geom:
@@ -435,12 +436,9 @@ def _draw_header_seed(
         bbox = draw.textbbox((0, 0), round_text, font=round_font)
         round_size = (bbox[2] - bbox[0], bbox[3] - bbox[1])
 
-    seed_text = str(seed)
-    if header.seed_pad_length > 0:
-        seed_text = seed_text.zfill(header.seed_pad_length)
-    seed_font = _fit_font_for_text(
+    code_font = _fit_font_for_text(
         draw,
-        seed_text,
+        code_text,
         max_w=left_col_w - 2 * gap,
         max_h=available_h * 0.55,
         prefer_bold=True,
@@ -448,7 +446,7 @@ def _draw_header_seed(
         min_size=12,
         max_size=int(available_h * 0.6),
     )
-    bbox = draw.textbbox((0, 0), seed_text, font=seed_font)
+    bbox = draw.textbbox((0, 0), code_text, font=code_font)
     seed_size = (bbox[2] - bbox[0], bbox[3] - bbox[1])
 
     if round_text:
@@ -458,7 +456,7 @@ def _draw_header_seed(
 
     sx = left_x + (left_col_w - seed_size[0]) / 2
     pad = max(4.0, gap * 0.4)
-    bbox = draw.textbbox((sx, sy), seed_text, font=seed_font)
+    bbox = draw.textbbox((sx, sy), code_text, font=code_font)
     bx1 = bbox[0] - pad
     by1 = bbox[1] - pad * 0.2
     bx2 = bbox[2] + pad
@@ -482,7 +480,43 @@ def _draw_header_seed(
         draw.arc([bx2 - 2 * radius, by2 - 2 * radius, bx2, by2], 0, 90, fill=(59, 130, 246), width=stroke_w)
     except Exception:
         pass
-    draw.text((sx, sy), seed_text, font=seed_font, fill=(59, 130, 246))
+    draw.text((sx, sy), code_text, font=code_font, fill=(59, 130, 246))
+
+
+def _draw_footer_seed(
+    draw: ImageDraw.ImageDraw,
+    template: TicketTemplateSpec,
+    grid: GridSpec,
+    header: TicketHeaderSpec,
+    seed: int | None,
+    scale: float,
+    ref_scale: float,
+) -> None:
+    if seed is None:
+        return
+
+    seed_text = str(seed)
+    text = f"Seed: {seed_text}"
+
+    pad_px = max(3.0, grid.padding_mm * scale * 0.55)
+    max_w = max(40.0, (template.width_mm * scale) - 2 * pad_px)
+    size = _fit_font_size_for_width_scaled(
+        draw,
+        text,
+        max_w=max_w,
+        max_size=12,
+        scale=scale,
+        ref_scale=ref_scale,
+        font_family=header.font_family,
+        min_size=7,
+    )
+    font = _get_font(max(6, int(size * 0.75)), header.font_family)
+    bbox = draw.textbbox((0, 0), text, font=font)
+    th = bbox[3] - bbox[1]
+
+    x = max(1.0, pad_px)
+    y = max(1.0, (template.height_mm * scale) - pad_px - th)
+    draw.text((x, y), text, font=font, fill=(71, 85, 105))
 
 
 def _get_header_base(
@@ -557,7 +591,25 @@ def render_ticket_preview(
         base = _get_header_base(template, grid, header, scale=scale, ref_scale=ref_scale)
         if base is not None:
             img.paste(base, (0, 0), base)
-        _draw_header_seed(draw, template, grid, header, seed=seed, scale=scale, ref_scale=ref_scale)
+        _draw_header_round_code(
+            draw,
+            template,
+            grid,
+            header,
+            round_code=getattr(header, "round_code", ""),
+            scale=scale,
+            ref_scale=ref_scale,
+        )
+
+    _draw_footer_seed(
+        draw,
+        template,
+        grid,
+        header if header is not None else TicketHeaderSpec(),
+        seed=seed,
+        scale=scale,
+        ref_scale=ref_scale,
+    )
 
     rects = _get_cached_rects(template, grid)
     stroke_w = max(1, int(grid.line_width_mm * scale))

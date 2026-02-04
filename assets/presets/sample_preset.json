@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "template": {
     "width_mm": 100.0,
     "height_mm": 300.0,
@@ -9,6 +9,7 @@
     "org_text": "ĐOÀN TRƯỜNG THPT NGUYỄN VIỆT HỒNG\nVÉ LÔ TÔ",
     "org_image_path": null,
     "round_name": "Vòng loại",
+    "round_code": "A01",
     "seed_pad_length": 4,
     "font_family": ""
   },

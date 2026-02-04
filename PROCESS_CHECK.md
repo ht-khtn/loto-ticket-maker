@@ -32,7 +32,7 @@ File này dùng để tick các hạng mục đã làm được theo [PLAN.md](P
 - [x] Style UI (QSS)
 - [x] Popups/dialogs dễ đọc (QMessageBox/QFileDialog)
 - [x] Các nhóm tuỳ chọn dạng collapsible (mặc định thu gọn)
-- [x] Header block: đơn vị/logo, tên vòng, seed lớn
+- [x] Header block: đơn vị/logo, tên vòng, mã vòng; seed nhỏ góc trái dưới
 - [x] Điều khiển cỡ chữ số + gap nhóm 3 hàng
 - [x] Preset container riêng + có preset mẫu
 - [x] Việt hoá nhãn UI (dọc/ngang, nhãn gọn gàng)

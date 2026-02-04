@@ -12,6 +12,7 @@ DEFAULT_HEADER = TicketHeaderSpec(
     org_text="",
     org_image_path=None,
     round_name="",
+    round_code="",
     seed_pad_length=0,
     font_family="",
 )

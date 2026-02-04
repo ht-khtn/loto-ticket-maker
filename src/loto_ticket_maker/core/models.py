@@ -22,6 +22,7 @@ class TicketHeaderSpec:
     org_text: str = ""  # nhiều dòng, mỗi dòng auto-fit
     org_image_path: str | None = None
     round_name: str = ""
+    round_code: str = ""
     seed_pad_length: int = 0
     font_family: str = ""
 

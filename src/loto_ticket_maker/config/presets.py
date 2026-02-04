@@ -26,6 +26,7 @@ class TicketHeaderSpecDict(TypedDict):
     org_text: str
     org_image_path: str | None
     round_name: str
+    round_code: str
     seed_pad_length: int
     font_family: str
 
@@ -66,7 +67,7 @@ class UiStateDict(TypedDict):
     ticket_count: int
 
 
-_PRESET_VERSION = 3
+_PRESET_VERSION = 4
 
 
 def save_preset(
@@ -89,6 +90,7 @@ def save_preset(
             "org_text": str(header.org_text),
             "org_image_path": header.org_image_path,
             "round_name": str(header.round_name),
+            "round_code": str(getattr(header, "round_code", "")),
             "seed_pad_length": int(header.seed_pad_length),
             "font_family": str(header.font_family),
         },
@@ -132,7 +134,7 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
     raw_obj = cast(dict[str, object], raw)
 
     version = raw_obj.get("version")
-    if not isinstance(version, int) or version not in (1, 2, 3):
+    if not isinstance(version, int) or version not in (1, 2, 3, 4):
         raise ValueError(f"Preset version không hỗ trợ: {version}")
 
     t_any = raw_obj.get("template")
@@ -161,6 +163,7 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
     org_text = h_obj.get("org_text")
     org_image_path = h_obj.get("org_image_path")
     round_name = h_obj.get("round_name")
+    round_code = h_obj.get("round_code")
     seed_pad_length = h_obj.get("seed_pad_length")
     font_family = h_obj.get("font_family")
 
@@ -168,6 +171,7 @@ def load_preset(path: str) -> tuple[TicketTemplateSpec, TicketHeaderSpec, GridSp
         org_text=str(org_text) if isinstance(org_text, str) else "",
         org_image_path=str(org_image_path) if isinstance(org_image_path, str) and org_image_path.strip() else None,
         round_name=str(round_name) if isinstance(round_name, str) else "",
+        round_code=str(round_code) if isinstance(round_code, str) else "",
         seed_pad_length=int(seed_pad_length) if isinstance(seed_pad_length, int) else 0,
         font_family=str(font_family) if isinstance(font_family, str) else "",
     )
