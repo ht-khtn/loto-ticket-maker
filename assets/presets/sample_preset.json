@@ -33,7 +33,7 @@
     "export_quality": "MEDIUM"
   },
   "ui": {
-    "seed": 1,
+    "seed": 0,
     "ticket_count": 100
   }
 }
