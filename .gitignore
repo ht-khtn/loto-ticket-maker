@@ -11,6 +11,7 @@ build/
 build32/
 dist/
 dist32/
+*.exe
 *.bat
 .vscode/
 .idea/
