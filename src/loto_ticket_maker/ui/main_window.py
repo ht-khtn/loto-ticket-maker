@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import os
+import sys
 from typing import Mapping, cast
 import random
 
@@ -72,6 +73,7 @@ class MainWindow(QMainWindow):
         self._org_image_path: str | None = None
         self._last_preview: QPixmap | None = None
         self._last_seed: int | None = None
+        self._last_seed_from_manual: bool = False
         self._preview_timer = QTimer(self)
         self._preview_timer.setSingleShot(True)
         self._preview_timer.setInterval(200)
@@ -607,9 +609,19 @@ class MainWindow(QMainWindow):
         self._schedule_preview()
 
     def _on_load_sample_preset(self) -> None:
-        sample_path = Path(__file__).resolve().parents[3] / "assets" / "presets" / "sample_preset.json"
-        if not sample_path.exists():
-            QMessageBox.warning(self, "Không tìm thấy", f"Không thấy mẫu có sẵn: {sample_path}")
+        candidates: list[Path] = []
+
+        meipass = getattr(sys, "_MEIPASS", None)
+        if isinstance(meipass, str) and meipass.strip():
+            candidates.append(Path(meipass) / "assets" / "presets" / "sample_preset.json")
+
+        # Dev mode (run from source)
+        candidates.append(Path(__file__).resolve().parents[3] / "assets" / "presets" / "sample_preset.json")
+
+        sample_path = next((p for p in candidates if p.exists()), None)
+        if sample_path is None:
+            tried = "\n".join(str(p) for p in candidates) or "(no candidates)"
+            QMessageBox.warning(self, "Không tìm thấy", f"Không thấy mẫu có sẵn. Đã thử:\n{tried}")
             return
         try:
             template, header, grid, print_spec, ui_state = load_preset(str(sample_path))
@@ -773,9 +785,12 @@ class MainWindow(QMainWindow):
         seed_value = int(self.seed.value())
         if seed_value != 0:
             self._last_seed = seed_value
+            self._last_seed_from_manual = True
             return seed_value
-        if self._last_seed is None:
+        # seed=0 => auto-random; nếu vừa đổi từ seed tay về 0 thì random lại.
+        if self._last_seed is None or self._last_seed_from_manual:
             self._last_seed = random.randint(1, 2_000_000_000)
+            self._last_seed_from_manual = False
         return self._last_seed
 
     def _update_preview(self) -> None:
