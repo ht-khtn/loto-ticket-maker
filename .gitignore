@@ -10,6 +10,7 @@ __pycache__/
 build/
 build32/
 dist/
+dist32/
 *.bat
 .vscode/
 .idea/
